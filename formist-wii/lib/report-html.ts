@@ -8,7 +8,7 @@ type ReportHtmlData = {
   businessRisk: string;
   aiReadiness: number;
   methodologyNote: string;
-  categoryScores: { category: EvidenceCategory; score: number; rationale: string }[];
+  categoryScores: { category: EvidenceCategory; score: number; maxScore: number; rationale: string }[];
   roadmap: {
     priorityRank: number;
     title: string;
@@ -32,12 +32,12 @@ function escapeHtml(value: string): string {
 /** Renders a self-contained HTML snapshot of the report, stored on Report.html for export/archival. */
 export function buildReportHtml(data: ReportHtmlData): string {
   const categoryRows = [...data.categoryScores]
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => b.score / b.maxScore - a.score / a.maxScore)
     .map(
       (cs) => `
         <tr>
           <td>${escapeHtml(CATEGORY_LABELS[cs.category])}</td>
-          <td>${cs.score}/100</td>
+          <td>${cs.score}/${cs.maxScore}</td>
           <td>${escapeHtml(cs.rationale)}</td>
         </tr>`
     )

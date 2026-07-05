@@ -76,8 +76,8 @@ export default async function ReportPage({
         </CardContent>
       </Card>
 
-      {/* 4 & 5. Business risk + AI readiness */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* 4, 5 & priority. Business risk + AI readiness + priority */}
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -100,6 +100,15 @@ export default async function ReportPage({
             </CardDescription>
           </CardHeader>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              Priority
+              <RiskBadge risk={report.priority} />
+            </CardTitle>
+            <CardDescription>How urgently this site should be prioritized for engagement.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
 
       {/* 6 & 7. Category scores + evidence */}
@@ -113,9 +122,11 @@ export default async function ReportPage({
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-base">
                   <span>{cs.label}</span>
-                  <span className="text-muted-foreground text-sm font-normal">{cs.score}/100</span>
+                  <span className="text-muted-foreground text-sm font-normal">
+                    {cs.score}/{cs.maxScore}
+                  </span>
                 </CardTitle>
-                <Progress value={cs.score} className="mt-1" />
+                <Progress value={(cs.score / cs.maxScore) * 100} className="mt-1" />
                 <CardDescription>{cs.rationale}</CardDescription>
               </CardHeader>
               {cs.evidence.length > 0 && (

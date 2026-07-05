@@ -172,31 +172,31 @@ RoadmapItem
 
 ## 8. Scoring Model
 
-### 8.1 Category weighting (overall WII score)
+### 8.1 Category point allocation (overall WII score)
 
-Weighted roll-up of the 10 categories into the overall 0–100 score:
+Each category is scored on its own point scale; the overall 0–100 score is the sum of all ten (implemented in `lib/scoring.ts`):
 
-| Category | Weight |
+| Category | Max points |
 |---|---|
-| Technical SEO | 15% |
-| On-page SEO | 12% |
-| AI discoverability | 12% |
-| Performance | 12% |
-| Accessibility | 10% |
-| Security | 12% |
-| Analytics | 8% |
-| WordPress maintainability* | 8% |
-| Brand experience | 6% |
-| Conversion | 5% |
+| Technical SEO | 12 |
+| On-page SEO | 10 |
+| AI discoverability | 13 |
+| Performance | 12 |
+| Accessibility | 8 |
+| Security & Compliance | 10 |
+| Analytics & Measurement | 7 |
+| WordPress maintainability* | 8 |
+| Brand experience | 10 |
+| UX & Conversion | 10 |
 
-*If a site is not detected as WordPress, the WordPress maintainability category is excluded and its weight is redistributed proportionally across the remaining 9 categories, so overall score remains comparable across CMS types. This redistribution rule must be visible in the report methodology note.
+*If a site is not detected as WordPress, the WordPress maintainability category is excluded and its 8 points are redistributed proportionally across the remaining 9 categories' point allocations, so the max always sums to 100 and overall score remains comparable across CMS types. This redistribution rule must be visible in the report methodology note.
 
 ### 8.2 Category score calculation
-Each category score is the weighted average of its underlying evidence checks, where each check contributes:
-- **Pass/fail checks** (e.g., HTTPS enforced): full points if pass, zero (or partial, if a defined partial-credit tier exists, e.g., "HTTPS present but no HSTS") if fail.
-- **Graduated checks** (e.g., % of images with alt text, Core Web Vitals against defined thresholds): scored on a defined scale (e.g., 0–100 linear or thresholded bands sourced from published standards like Core Web Vitals "Good/Needs Improvement/Poor").
-- Severity-weighted deduction: `critical` findings deduct more than `minor` findings within a category, so one critical security exposure can't be diluted by many trivial passes.
-- Checks with insufficient data (page unreachable, feature not applicable) are excluded from that category's denominator rather than scored as failing, and the report flags reduced confidence when a category has significant missing data (e.g., >30% of applicable checks unresolved).
+Each category's score (0 to its max points) is evidence-based, derived from every underlying check's severity and confidence — never from generated narrative text:
+- Each check contributes a confidence-weighted severity penalty; `critical` findings weigh far more than `minor` findings (a steep severity curve, not a linear one).
+- On top of that weighted average, a hard ceiling applies based on the single worst severity present in the category (e.g. any critical finding caps the category at 30% of its points) — this is what actually guarantees one critical exposure can't be diluted by many trivial passes, since a weighted average alone can still be pulled back up by enough passing checks.
+- Checks with insufficient data (page unreachable, feature not applicable) are excluded from that category's evidence rather than scored as failing; a category with no evidence at all gets a neutral (50%) score and low confidence rather than being scored as failing.
+- Every category score carries a confidence value (evidence-confidence average, discounted further if the crawl covered fewer pages than requested) and a rationale plus evidenceRefs pointing back to the specific findings that drove the score.
 
 ### 8.3 Grade mapping
 
@@ -211,12 +211,15 @@ Each category score is the weighted average of its underlying evidence checks, w
 ### 8.4 Business Risk
 Derived (not simply averaged) from the presence of high-severity findings in Security, Technical SEO (indexability/crawl blockers), Accessibility (legal-exposure-relevant failures, e.g., ADA/WCAG blockers), and WordPress maintainability (known-vulnerable/outdated core or plugins):
 - **Critical**: any single critical-severity finding in Security or WordPress maintainability (e.g., exposed credentials file, known-vulnerable plugin with public exploit).
-- **High**: multiple major-severity findings across risk-relevant categories, or overall Security/Accessibility category score below 50.
-- **Medium**: isolated major findings or category scores in the 50–75 range.
-- **Low**: no major/critical findings; risk-relevant categories score above 75.
+- **High**: multiple major-severity findings across risk-relevant categories, or any risk-relevant category scoring below 50% of its own points.
+- **Medium**: isolated major findings, or a risk-relevant category scoring in the 50–75% range of its own points.
+- **Low**: no major/critical findings; risk-relevant categories all score above 75% of their own points.
 
 ### 8.5 AI Readiness
-Primarily driven by the AI discoverability category score, adjusted by supporting signals from Technical SEO (structured data validity, crawlability) and On-page SEO (content extractability). Reported as both a 0–100 score and a Low/Medium/High label using the same band thresholds as Section 8.3, for consistency with the overall grade.
+Primarily driven by the AI discoverability category (70% of the blend), adjusted by supporting signals from Technical SEO (15%) and On-page SEO (15%) — structured data validity, crawlability, and content extractability. Reported as both a 0–100 score and a Low/Medium/High label using the same band thresholds as Section 8.3, for consistency with the overall grade.
+
+### 8.6 Priority
+A single "how urgently should this be acted on" label, synthesized from the overall score and Business Risk (Section 8.4): Critical when Business Risk is critical; High when Business Risk is high or the overall score is below 60; Medium when Business Risk is medium or the overall score is below 80; Low otherwise.
 
 ## 9. Report Sections
 

@@ -86,10 +86,7 @@ export default async function DashboardPage() {
                 {scans.map((scan) => {
                   const summary =
                     scan.report && scan.categoryScores.length > 0
-                      ? computeScoreSummary(
-                          scan.categoryScores,
-                          scan.client.detectedCms === "wordpress"
-                        )
+                      ? computeScoreSummary(scan.categoryScores)
                       : null;
                   return (
                     <TableRow key={scan.id}>

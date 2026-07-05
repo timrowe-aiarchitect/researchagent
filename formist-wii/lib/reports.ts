@@ -2,18 +2,21 @@ import { prisma } from "@/lib/prisma";
 import {
   CATEGORY_LABELS,
   computeOverallScore,
+  derivePriority,
   gradeFromScore,
   deriveAiReadiness,
   deriveBusinessRisk,
 } from "@/lib/scoring";
 import type { EvidenceCategory } from "@/generated/prisma/enums";
 
-/** Overall score/grade are derived from CategoryScore rows, not stored columns — see lib/scoring.ts §8. */
-export function computeScoreSummary(
-  categoryScores: { category: EvidenceCategory; score: number }[],
-  isWordPress: boolean
-) {
-  const overallScore = computeOverallScore(categoryScores, isWordPress);
+/**
+ * Overall score/grade are derived from CategoryScore rows, not a stored column — see
+ * lib/scoring.ts. Each row's `score` is already "out of its (possibly WordPress-redistributed)
+ * maxScore" as of write time (lib/scan-pipeline.ts), so summing raw scores here is enough; no
+ * per-category weighting needs to happen again at read time.
+ */
+export function computeScoreSummary(categoryScores: { score: number }[]) {
+  const overallScore = computeOverallScore(categoryScores);
   const grade = gradeFromScore(overallScore);
   return { overallScore, grade };
 }
@@ -49,21 +52,25 @@ export async function getReportPayload(id: string) {
     evidenceByCategory.set(item.category, list);
   }
 
-  const categoryScoreMap: Partial<Record<EvidenceCategory, number>> = {};
-  for (const cs of scan.categoryScores) categoryScoreMap[cs.category] = cs.score;
+  // Ratios (0-1), not raw points, since categories now have different maxScore allocations —
+  // deriveBusinessRisk/deriveAiReadiness compare against fixed ratio thresholds.
+  const categoryRatioMap: Partial<Record<EvidenceCategory, number>> = {};
+  for (const cs of scan.categoryScores) {
+    categoryRatioMap[cs.category] = cs.maxScore > 0 ? cs.score / cs.maxScore : 0;
+  }
 
   const { overallScore, grade } = computeScoreSummary(
-    scan.categoryScores.map((cs) => ({ category: cs.category, score: cs.score })),
-    isWordPress
+    scan.categoryScores.map((cs) => ({ score: cs.score }))
   );
-  const businessRisk = deriveBusinessRisk(scan.evidenceItems, categoryScoreMap);
-  const aiReadiness = deriveAiReadiness(categoryScoreMap);
+  const businessRisk = deriveBusinessRisk(scan.evidenceItems, categoryRatioMap);
+  const aiReadiness = deriveAiReadiness(categoryRatioMap).score;
+  const priority = derivePriority(overallScore, businessRisk);
   const methodologyNote = isWordPress
     ? "Scored across all 10 WII categories, including WordPress maintainability."
-    : "WordPress maintainability was not applicable for this site; its weight was redistributed across the other 9 categories.";
+    : "WordPress maintainability was not applicable for this site; its points were redistributed across the other 9 categories.";
 
   const categoryScores = [...scan.categoryScores]
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => (categoryRatioMap[b.category] ?? 0) - (categoryRatioMap[a.category] ?? 0))
     .map((cs) => ({
       category: cs.category,
       label: CATEGORY_LABELS[cs.category],
@@ -89,6 +96,7 @@ export async function getReportPayload(id: string) {
     grade,
     businessRisk,
     aiReadiness,
+    priority,
     executiveSummary: report.executiveSummary,
     methodologyNote,
     recommendations: scan.recommendations

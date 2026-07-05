@@ -3,18 +3,10 @@ import { crawlWebsite, normalizeDomain } from "@/lib/crawler-service";
 import { extractAllEvidenceForPage, type ScanContext } from "@/lib/extractors";
 import { isCrawlOk } from "@/lib/extractors/types";
 import { fetchPageSpeedForPages, PSI_MAX_PRIORITY_PAGES } from "@/lib/pagespeed-service";
-import {
-  computeCategoryScore,
-  computeOverallScore,
-  deriveAiReadiness,
-  deriveBusinessRisk,
-  gradeFromScore,
-  isPassing,
-  statusFromScore,
-} from "@/lib/scoring";
+import { computeScanScore, isPassing } from "@/lib/scoring";
 import { buildReportHtml } from "@/lib/report-html";
 import type { Prisma } from "@/generated/prisma/client";
-import type { EvidenceCategory, Severity } from "@/generated/prisma/enums";
+import type { CrawlStatus, EvidenceCategory, Severity } from "@/generated/prisma/enums";
 
 const MAX_PAGES_HARD_CAP = 25;
 
@@ -112,7 +104,14 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       data: { status: "scoring", pagesCrawled: crawl.pages.length },
     });
 
-    await scoreAndFinalize(scanId, isWordPress, rootUrl, evidenceWithRecommendation);
+    await scoreAndFinalize(
+      scanId,
+      isWordPress,
+      rootUrl,
+      scan.pagesRequested,
+      crawl.pages,
+      evidenceWithRecommendation
+    );
   } catch (error) {
     await prisma.scan.update({
       where: { id: scanId },
@@ -133,48 +132,37 @@ async function scoreAndFinalize(
   scanId: string,
   isWordPress: boolean,
   rootUrl: string,
+  pagesRequested: number,
+  pages: { crawlStatus: CrawlStatus }[],
   evidenceItems: EvidenceWithRecommendation[]
 ): Promise<void> {
-  const categories = [...new Set(evidenceItems.map((e) => e.category))] as EvidenceCategory[];
-  const categoryScoreMap: Partial<Record<EvidenceCategory, number>> = {};
-  const categorySummaries: { category: EvidenceCategory; score: number; rationale: string }[] = [];
+  const scoring = computeScanScore({
+    evidence: evidenceItems.map((e) => ({
+      id: e.id,
+      category: e.category,
+      severity: e.severity,
+      confidence: e.confidence,
+    })),
+    pages,
+    scanMeta: { pagesRequested, isWordPress },
+  });
 
-  for (const category of categories) {
-    const categoryEvidence = evidenceItems.filter((e) => e.category === category);
-    const score = computeCategoryScore(categoryEvidence);
-    categoryScoreMap[category] = score;
-
-    const failing = categoryEvidence.filter((e) => !isPassing(e.severity));
-    const rationale =
-      failing.length === 0
-        ? `All ${categoryEvidence.length} checks passed.`
-        : `${failing.length} of ${categoryEvidence.length} checks need attention.`;
-    categorySummaries.push({ category, score, rationale });
-
-    const avgConfidence =
-      categoryEvidence.reduce((sum, e) => sum + e.confidence, 0) / categoryEvidence.length;
-
+  for (const cs of scoring.categoryScores) {
     await prisma.categoryScore.create({
       data: {
         scanId,
-        category,
-        score,
-        maxScore: 100,
-        status: statusFromScore(score),
-        rationale,
-        confidence: Math.round(avgConfidence * 100) / 100,
-        evidenceRefs: categoryEvidence.map((e) => e.id),
+        category: cs.category,
+        score: cs.score,
+        maxScore: cs.maxScore,
+        status: cs.status,
+        rationale: cs.rationale,
+        confidence: cs.confidence,
+        evidenceRefs: cs.evidenceRefs,
       },
     });
   }
 
-  const overallScore = computeOverallScore(
-    categories.map((category) => ({ category, score: categoryScoreMap[category]! })),
-    isWordPress
-  );
-  const grade = gradeFromScore(overallScore);
-  const businessRisk = deriveBusinessRisk(evidenceItems, categoryScoreMap);
-  const aiReadiness = deriveAiReadiness(categoryScoreMap);
+  const { overallScore, grade, businessRisk, aiReadiness, priority } = scoring;
 
   const failingByCheck = new Map<string, (typeof evidenceItems)[number]>();
   for (const item of evidenceItems) {
@@ -196,7 +184,7 @@ async function scoreAndFinalize(
 
   const methodologyNote = isWordPress
     ? "Scored across all 10 WII categories, including WordPress maintainability."
-    : "WordPress maintainability was not applicable for this site; its weight was redistributed across the other 9 categories.";
+    : "WordPress maintainability was not applicable for this site; its points were redistributed across the other 9 categories.";
   const executiveSummary = buildExecutiveSummary(rootUrl, overallScore, grade, businessRisk);
 
   const roadmap = worstFindings.map((finding, index) => ({
@@ -213,9 +201,15 @@ async function scoreAndFinalize(
     overallScore,
     grade,
     businessRisk,
-    aiReadiness,
+    aiReadiness: aiReadiness.score,
+    priority,
     methodologyNote,
-    categoryScores: categorySummaries,
+    categoryScores: scoring.categoryScores.map((cs) => ({
+      category: cs.category,
+      score: cs.score,
+      maxScore: cs.maxScore,
+      rationale: cs.rationale,
+    })),
     roadmap,
     recommendations: recommendationTexts,
     generatedAt: new Date().toISOString(),
