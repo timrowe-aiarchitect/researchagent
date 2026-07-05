@@ -197,7 +197,7 @@ export function readinessLabel(score0to100: number): ReadinessLabel {
 export const riskOrReadinessLabel = readinessLabel;
 
 // Categories whose findings can drive elevated business risk — see PRD §8.4.
-const RISK_CATEGORIES: EvidenceCategory[] = [
+export const RISK_CATEGORIES: EvidenceCategory[] = [
   "security",
   "technical_seo",
   "accessibility",

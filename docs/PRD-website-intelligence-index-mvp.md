@@ -223,19 +223,21 @@ A single "how urgently should this be acted on" label, synthesized from the over
 
 ## 9. Report Sections
 
-The generated report (in-app and PDF) must include, in this order:
+The generated report (structured JSON, in-app HTML, and PDF — all built from the same `ReportData`, see `lib/report-service.ts`) must include, in this order:
 
-1. **Cover / Summary** — site URL, crawl date, pages crawled, overall WII score, grade.
-2. **Executive Summary** — 3–5 sentence plain-language summary of overall health, written for a non-technical client stakeholder.
-3. **Overall WII Score & Grade** — the headline number, grade, and a short methodology note (including any weight-redistribution note per 8.1).
-4. **Business Risk** — rating with the specific driving findings called out.
-5. **AI Readiness** — rating with the specific driving findings called out.
-6. **Category Scores** — all 10 (or 9, if non-WP) categories with individual scores, shown comparatively (e.g., bar/table).
-7. **Evidence by Category** — for each category, the supporting evidence items (specific pages, values, severity), organized so every score is traceable to a concrete finding.
-8. **Priority Roadmap** — ranked list of recommended actions (impact vs. effort), tied back to the evidence that motivated them.
-9. **Client-Ready Recommendations** — plain-language, non-technical rewrite of the roadmap suitable for direct client consumption (no jargon, no internal tool names).
-10. **Methodology & Limitations** — crawl scope (≤25 pages), what was/wasn't checked, confidence notes for categories with limited data.
-11. **Appendix: Full Page List** — the crawled pages and their individual crawl status, for internal QA/traceability.
+1. **Cover** — site URL, client name, crawl date, pages crawled vs. requested, detected CMS, overall WII score, grade.
+2. **Executive Summary** — plain-language summary of overall health, written for a non-technical client stakeholder, in clear Formist language: strategic, direct, evidence-based, human-centered, focused on business value, no hype.
+3. **Executive Scorecard** — business risk (with its specific driving findings), AI readiness, priority level, and a short methodology note (including any weight-redistribution note per 8.1).
+4. **Overall Website Intelligence Index** — the headline score/grade and a comparative breakdown of all 10 (or 9, if non-WP) category scores.
+5. **Key Findings** — the highest-severity findings across all categories, deduplicated so each distinct issue is called out once.
+6. **Category Deep Dives** — for every category except AI Discoverability and WordPress Maintainability (which get their own dedicated sections below), the score, rationale, and supporting evidence items, organized so every score is traceable to a concrete finding.
+7. **AI Discoverability Assessment** — the category score and evidence, plus the qualitative strategist perspective on AI discoverability where a qualitative assessment was generated.
+8. **WordPress Maintainability Assessment** — the category score and evidence for WordPress sites, or a clear note that it wasn't applicable (and that its points were redistributed) for non-WP sites.
+9. **Priority Roadmap** — ranked list of recommended actions (impact vs. effort), tied back to the evidence that motivated them.
+10. **Recommended Next Steps** — plain-language, non-technical rewrite of the roadmap suitable for direct client consumption (no jargon, no internal tool names).
+11. **Appendix: Evidence** — every evidence item, organized by category, for full traceability.
+
+The report additionally includes a **Site Snapshots** section (screenshots of crawled pages, embedded so the export is self-contained) after Recommended Next Steps, and a **Methodology & Limitations** note (crawl scope of ≤25 pages, confidence notes for categories with limited data) folded into the Executive Scorecard's methodology note above rather than as a separate top-level section.
 
 ## 10. Acceptance Criteria
 

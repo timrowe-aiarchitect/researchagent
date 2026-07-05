@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { getReportPayload } from "@/lib/reports";
@@ -15,16 +16,18 @@ import {
 } from "@/components/ui/table";
 import { GradeBadge, RiskBadge } from "@/components/status-badges";
 import { ExportPdfButton } from "@/components/export-pdf-button";
+import type { CategoryStatus, Severity } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
 
-function readinessLabel(score: number): "Low" | "Medium" | "High" {
-  if (score >= 80) return "High";
-  if (score >= 50) return "Medium";
-  return "Low";
-}
+const STATUS_VARIANT: Record<CategoryStatus, "success" | "warning" | "destructive"> = {
+  good: "success",
+  needs_attention: "warning",
+  poor: "destructive",
+  critical: "destructive",
+};
 
-const SEVERITY_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
+const SEVERITY_VARIANT: Record<Severity, "success" | "warning" | "destructive" | "secondary"> = {
   info: "secondary",
   minor: "secondary",
   moderate: "warning",
@@ -41,156 +44,162 @@ export default async function ReportPage({
   const report = await getReportPayload(id);
   if (!report) notFound();
 
+  const { data } = report;
+
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 print:max-w-none print:px-0">
-      {/* 1. Cover / Summary */}
+      {/* 1. Cover */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-muted-foreground text-sm font-medium">Website Intelligence Index Report</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">
-            {report.client.name ?? report.client.rootUrl}
+            {data.cover.clientName ?? data.cover.rootUrl}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Generated {new Date(report.generatedAt).toLocaleString()} · {report.pagesCrawled} pages
-            crawled
-            {report.client.detectedCms === "wordpress" && " · WordPress detected"}
+            Generated {new Date(data.cover.generatedAt).toLocaleString()} · {data.cover.pagesCrawled} of{" "}
+            {data.cover.pagesRequested} pages crawled
+            {data.cover.detectedCms === "wordpress" && " · WordPress detected"}
           </p>
         </div>
-        <ExportPdfButton />
+        <ExportPdfButton pdfUrl={report.pdfUrl} />
       </div>
-
-      {/* 2 & 3. Executive summary + overall score */}
       <Card className="mt-6">
-        <CardContent className="flex flex-wrap items-center gap-8 pt-6 pb-6">
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex size-24 items-center justify-center rounded-full border-4 border-primary/20 text-3xl font-bold">
-              {report.overallScore}
-            </div>
-            <GradeBadge grade={report.grade} className="mt-1" />
-            <span className="text-muted-foreground text-xs">Overall WII score</span>
+        <CardContent className="flex items-center gap-4 pt-6 pb-6">
+          <div className="flex size-24 items-center justify-center rounded-full border-4 border-primary/20 text-3xl font-bold">
+            {data.cover.overallScore}
           </div>
-          <Separator orientation="vertical" className="hidden h-20 sm:block" />
-          <div className="flex-1 min-w-[240px]">
-            <p className="text-sm leading-relaxed">{report.executiveSummary}</p>
-          </div>
+          <GradeBadge grade={data.cover.grade} />
         </CardContent>
       </Card>
 
-      {/* 4, 5 & priority. Business risk + AI readiness + priority */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Business risk
-              <RiskBadge risk={report.businessRisk} />
-            </CardTitle>
-            <CardDescription>
-              Derived from Security, Technical SEO, Accessibility, and WordPress maintainability findings.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              AI readiness
-              <Badge variant="secondary">{report.aiReadiness}/100 · {readinessLabel(report.aiReadiness)}</Badge>
-            </CardTitle>
-            <CardDescription>
-              How easily AI crawlers and assistants can discover and parse this site&apos;s content.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Priority
-              <RiskBadge risk={report.priority} />
-            </CardTitle>
-            <CardDescription>How urgently this site should be prioritized for engagement.</CardDescription>
-          </CardHeader>
+      {/* 2. Executive Summary */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold tracking-tight">Executive Summary</h2>
+        <Card className="mt-4">
+          <CardContent className="pt-6 pb-6 text-sm leading-relaxed">{data.executiveSummary}</CardContent>
         </Card>
       </div>
 
-      {/* Qualitative assessment — an additive AI strategist read, entirely separate from the
-          deterministic category scores below. Its per-dimension "score" is the model's own
-          qualitative point estimate for comparison only; it is never summed into overallScore or
-          written to a CategoryScore row. Omitted when it wasn't generated (e.g. no API key
-          configured for this deployment). */}
-      {report.qualitativeAssessment && (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold tracking-tight">Qualitative assessment</h2>
-          <p className="text-muted-foreground text-sm">
-            An AI strategist&apos;s advisory read of brand experience, UX/conversion, and AI discoverability —
-            a qualitative complement to the evidence-based scores above, not a factor in them.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {(
-              [
-                ["Brand experience", report.qualitativeAssessment.brandExperience],
-                ["UX & conversion", report.qualitativeAssessment.uxConversion],
-                ["AI discoverability", report.qualitativeAssessment.aiDiscoverability],
-              ] as const
-            ).map(([label, dimension]) => (
-              <Card key={label} className="break-inside-avoid">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-base">
-                    <span>{label}</span>
-                    <span className="text-muted-foreground text-sm font-normal">
-                      {dimension.score}/{dimension.maxScore}
-                    </span>
-                  </CardTitle>
-                  <Progress value={(dimension.score / dimension.maxScore) * 100} className="mt-1" />
-                  <CardDescription className="flex items-center justify-between gap-2">
-                    <span>{dimension.rationale}</span>
-                    <Badge variant="secondary" className="shrink-0">
-                      {dimension.confidence} confidence
-                    </Badge>
-                  </CardDescription>
-                </CardHeader>
-                {(dimension.evidence.length > 0 || dimension.recommendations.length > 0) && (
-                  <CardContent className="flex flex-col gap-3 pb-6 text-sm">
-                    {dimension.evidence.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Evidence cited</p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          {dimension.evidence.map((e, i) => (
-                            <li key={i}>{e}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {dimension.recommendations.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Recommendations</p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5">
-                          {dimension.recommendations.map((r, i) => (
-                            <li key={i}>{r}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 6 & 7. Category scores + evidence */}
+      {/* 3. Executive Scorecard */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold tracking-tight">Category scores</h2>
-        <p className="text-muted-foreground text-sm">Every score below is backed by concrete evidence.</p>
+        <h2 className="text-lg font-semibold tracking-tight">Executive Scorecard</h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Business risk
+                <RiskBadge risk={data.executiveScorecard.businessRisk} />
+              </CardTitle>
+              {data.executiveScorecard.businessRiskDrivers.length > 0 && (
+                <CardDescription>
+                  <ul className="list-disc space-y-1 pl-4">
+                    {data.executiveScorecard.businessRiskDrivers.map((driver, i) => (
+                      <li key={i}>{driver}</li>
+                    ))}
+                  </ul>
+                </CardDescription>
+              )}
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                AI readiness
+                <Badge variant="secondary">
+                  {data.executiveScorecard.aiReadiness.score}/100 · {data.executiveScorecard.aiReadiness.label}
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                How easily AI crawlers and assistants can discover and parse this site&apos;s content.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Priority
+                <RiskBadge risk={data.executiveScorecard.priority} />
+              </CardTitle>
+              <CardDescription>How urgently this site should be prioritized for engagement.</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+        <p className="text-muted-foreground mt-4 text-sm">{data.executiveScorecard.methodologyNote}</p>
+      </div>
 
+      {/* 4. Overall Website Intelligence Index */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold tracking-tight">Overall Website Intelligence Index</h2>
+        <Card className="mt-4">
+          <CardContent className="flex flex-col gap-4 pt-6 pb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold">{data.overallIndex.overallScore}</span>
+              <span className="text-muted-foreground text-sm">/100 · Grade {data.overallIndex.grade}</span>
+            </div>
+            <Separator />
+            <ul className="flex flex-col gap-3">
+              {data.overallIndex.categoryBreakdown.map((c) => (
+                <li key={c.category} className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{c.label}</span>
+                    <span className="text-muted-foreground">
+                      {c.score}/{c.maxScore}
+                    </span>
+                  </div>
+                  <Progress value={(c.score / c.maxScore) * 100} />
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 5. Key Findings */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold tracking-tight">Key Findings</h2>
+        <Card className="mt-4">
+          <CardContent className="pt-6 pb-6">
+            {data.keyFindings.length > 0 ? (
+              <ul className="flex flex-col gap-2">
+                {data.keyFindings.map((f, i) => (
+                  <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground text-xs">{f.categoryLabel}</span>
+                      <Badge variant={SEVERITY_VARIANT[f.severity]} className="capitalize">
+                        {f.severity}
+                      </Badge>
+                    </div>
+                    <p>{f.finding}</p>
+                    {f.url && <p className="text-muted-foreground truncate text-xs">{f.url}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                No significant findings — the site is in solid shape across all categories.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 6. Category Deep Dives */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold tracking-tight">Category Deep Dives</h2>
         <div className="mt-4 flex flex-col gap-4">
-          {report.categoryScores.map((cs) => (
+          {data.categoryDeepDives.map((cs) => (
             <Card key={cs.category} className="break-inside-avoid">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-base">
                   <span>{cs.label}</span>
-                  <span className="text-muted-foreground text-sm font-normal">
-                    {cs.score}/{cs.maxScore}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={STATUS_VARIANT[cs.status]} className="capitalize">
+                      {cs.status.replace(/_/g, " ")}
+                    </Badge>
+                    <span className="text-muted-foreground text-sm font-normal">
+                      {cs.score}/{cs.maxScore}
+                    </span>
+                  </div>
                 </CardTitle>
                 <Progress value={(cs.score / cs.maxScore) * 100} className="mt-1" />
                 <CardDescription>{cs.rationale}</CardDescription>
@@ -198,8 +207,8 @@ export default async function ReportPage({
               {cs.evidence.length > 0 && (
                 <CardContent className="pb-6">
                   <ul className="flex flex-col gap-2">
-                    {cs.evidence.map((e) => (
-                      <li key={e.id} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
+                    {cs.evidence.map((e, i) => (
+                      <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
                           <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
@@ -207,9 +216,7 @@ export default async function ReportPage({
                           </Badge>
                         </div>
                         <p className="text-muted-foreground">{e.finding}</p>
-                        {e.pageUrl && (
-                          <p className="text-muted-foreground truncate text-xs">{e.pageUrl}</p>
-                        )}
+                        {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
                       </li>
                     ))}
                   </ul>
@@ -220,9 +227,121 @@ export default async function ReportPage({
         </div>
       </div>
 
-      {/* 8. Priority roadmap */}
+      {/* 7. AI Discoverability Assessment */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold tracking-tight">Priority roadmap</h2>
+        <h2 className="text-lg font-semibold tracking-tight">AI Discoverability Assessment</h2>
+        <Card className="mt-4 break-inside-avoid">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-base">
+              <span>AI Discoverability</span>
+              <div className="flex items-center gap-2">
+                <Badge variant={STATUS_VARIANT[data.aiDiscoverabilityAssessment.status]} className="capitalize">
+                  {data.aiDiscoverabilityAssessment.status.replace(/_/g, " ")}
+                </Badge>
+                <span className="text-muted-foreground text-sm font-normal">
+                  {data.aiDiscoverabilityAssessment.score}/{data.aiDiscoverabilityAssessment.maxScore}
+                </span>
+              </div>
+            </CardTitle>
+            <Progress
+              value={
+                (data.aiDiscoverabilityAssessment.score / data.aiDiscoverabilityAssessment.maxScore) * 100
+              }
+              className="mt-1"
+            />
+            <CardDescription>{data.aiDiscoverabilityAssessment.rationale}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 pb-6">
+            {data.aiDiscoverabilityAssessment.strategistPerspective && (
+              <div className="bg-muted rounded-md p-3 text-sm">
+                <p className="text-muted-foreground mb-1 text-xs font-medium uppercase">
+                  Strategist perspective
+                </p>
+                <p>{data.aiDiscoverabilityAssessment.strategistPerspective.rationale}</p>
+              </div>
+            )}
+            {data.aiDiscoverabilityAssessment.evidence.length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {data.aiDiscoverabilityAssessment.evidence.map((e, i) => (
+                  <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
+                      <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
+                        {e.severity}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground">{e.finding}</p>
+                    {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 8. WordPress Maintainability Assessment */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold tracking-tight">WordPress Maintainability Assessment</h2>
+        {data.wordpressMaintainabilityAssessment.applicable ? (
+          <Card className="mt-4 break-inside-avoid">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-base">
+                <span>WordPress Maintainability</span>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={STATUS_VARIANT[data.wordpressMaintainabilityAssessment.status]}
+                    className="capitalize"
+                  >
+                    {data.wordpressMaintainabilityAssessment.status.replace(/_/g, " ")}
+                  </Badge>
+                  <span className="text-muted-foreground text-sm font-normal">
+                    {data.wordpressMaintainabilityAssessment.score}/
+                    {data.wordpressMaintainabilityAssessment.maxScore}
+                  </span>
+                </div>
+              </CardTitle>
+              <Progress
+                value={
+                  (data.wordpressMaintainabilityAssessment.score /
+                    data.wordpressMaintainabilityAssessment.maxScore) *
+                  100
+                }
+                className="mt-1"
+              />
+              <CardDescription>{data.wordpressMaintainabilityAssessment.rationale}</CardDescription>
+            </CardHeader>
+            {data.wordpressMaintainabilityAssessment.evidence.length > 0 && (
+              <CardContent className="pb-6">
+                <ul className="flex flex-col gap-2">
+                  {data.wordpressMaintainabilityAssessment.evidence.map((e, i) => (
+                    <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
+                        <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
+                          {e.severity}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground">{e.finding}</p>
+                      {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            )}
+          </Card>
+        ) : (
+          <Card className="mt-4">
+            <CardContent className="text-muted-foreground pt-6 pb-6 text-sm">
+              {data.wordpressMaintainabilityAssessment.note}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* 9. Priority Roadmap */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold tracking-tight">Priority Roadmap</h2>
         <p className="text-muted-foreground text-sm">Ranked by business impact vs. estimated effort.</p>
         <Card className="mt-4">
           <CardContent className="pb-6 pt-6">
@@ -237,7 +356,7 @@ export default async function ReportPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {report.roadmap.map((item) => (
+                {data.priorityRoadmap.map((item) => (
                   <TableRow key={item.priorityRank}>
                     <TableCell className="font-medium">{item.priorityRank}</TableCell>
                     <TableCell className="max-w-md whitespace-normal">
@@ -249,7 +368,7 @@ export default async function ReportPage({
                     <TableCell>{item.effort}</TableCell>
                   </TableRow>
                 ))}
-                {report.roadmap.length === 0 && (
+                {data.priorityRoadmap.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-muted-foreground text-center">
                       No high-priority issues found — nice work.
@@ -262,14 +381,14 @@ export default async function ReportPage({
         </Card>
       </div>
 
-      {/* 9. Client-ready recommendations */}
+      {/* 10. Recommended Next Steps */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold tracking-tight">Client-ready recommendations</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Recommended Next Steps</h2>
         <Card className="mt-4">
           <CardContent className="pb-6 pt-6">
-            {report.recommendations.length > 0 ? (
+            {data.recommendedNextSteps.length > 0 ? (
               <ul className="list-disc space-y-2 pl-5 text-sm">
-                {report.recommendations.map((rec, i) => (
+                {data.recommendedNextSteps.map((rec, i) => (
                   <li key={i}>{rec}</li>
                 ))}
               </ul>
@@ -280,46 +399,59 @@ export default async function ReportPage({
         </Card>
       </div>
 
-      {/* 10. Methodology & limitations */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold tracking-tight">Methodology &amp; limitations</h2>
-        <Card className="mt-4">
-          <CardContent className="pb-6 pt-6 text-sm text-muted-foreground">
-            <p>{report.methodologyNote}</p>
-            <p className="mt-2">
-              This scan crawled up to {report.pagesCrawled} publicly reachable pages. Categories with
-              limited crawlable data may show reduced confidence. This report is an automated
-              diagnostic and is not a substitute for a manual legal accessibility or security audit.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Site snapshots */}
+      {data.screenshots.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold tracking-tight">Site Snapshots</h2>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {data.screenshots.map((s) => (
+              <figure key={s.pageUrl} className="overflow-hidden rounded-md border">
+                <Image
+                  src={`/${s.path.replace(/^\/+/, "")}`}
+                  alt={`Screenshot of ${s.pageUrl}`}
+                  width={800}
+                  height={600}
+                  className="w-full"
+                  unoptimized
+                />
+                <figcaption className="text-muted-foreground truncate p-2 text-xs">{s.pageUrl}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* 11. Appendix: full page list */}
+      {/* 11. Appendix: Evidence */}
       <div className="mt-8 mb-12">
-        <h2 className="text-lg font-semibold tracking-tight">Appendix: crawled pages</h2>
-        <Card className="mt-4">
-          <CardContent className="pb-6 pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>URL</TableHead>
-                  <TableHead>HTTP status</TableHead>
-                  <TableHead>Crawl status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {report.pages.map((p) => (
-                  <TableRow key={p.url}>
-                    <TableCell className="max-w-md truncate">{p.url}</TableCell>
-                    <TableCell>{p.httpStatus ?? "—"}</TableCell>
-                    <TableCell className="capitalize">{p.crawlStatus.replace(/_/g, " ")}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <h2 className="text-lg font-semibold tracking-tight">Appendix: Evidence</h2>
+        <p className="text-muted-foreground text-sm">
+          Every finding behind every score, organized by category, for full traceability.
+        </p>
+        <div className="mt-4 flex flex-col gap-4">
+          {data.appendixEvidence.map((group) => (
+            <Card key={group.category}>
+              <CardHeader>
+                <CardTitle className="text-base">{group.categoryLabel}</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-6">
+                <ul className="flex flex-col gap-2">
+                  {group.items.map((e, i) => (
+                    <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
+                        <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
+                          {e.severity}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground">{e.finding}</p>
+                      {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -46,6 +46,9 @@ next-env.d.ts
 # Runtime-generated crawl screenshots (see lib/crawler-service.ts)
 /public/screenshots/
 
+# Runtime-generated report PDFs (see lib/report-service.ts)
+/public/reports/
+
 # The repo-root .gitignore (shared with the unrelated Python service in this monorepo) has a
 # bare `lib/` rule intended for Python build output. Un-ignore this app's own lib/ directory.
 !/lib/

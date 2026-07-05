@@ -5,9 +5,12 @@ import { isCrawlOk } from "@/lib/extractors/types";
 import { fetchPageSpeedForPages, PSI_MAX_PRIORITY_PAGES } from "@/lib/pagespeed-service";
 import { computeScanScore, isPassing } from "@/lib/scoring";
 import { generateQualitativeAssessment } from "@/lib/qualitative-assessment";
+import { buildReportData, generateReportPdf } from "@/lib/report-service";
 import { buildReportHtml } from "@/lib/report-html";
 import type { Prisma } from "@/generated/prisma/client";
-import type { CrawlStatus, EvidenceCategory, Severity } from "@/generated/prisma/enums";
+import type { CrawlStatus, DetectedCms, EvidenceCategory, Severity } from "@/generated/prisma/enums";
+
+const MAX_SCREENSHOTS_IN_REPORT = 6;
 
 const MAX_PAGES_HARD_CAP = 25;
 
@@ -142,6 +145,8 @@ async function scoreAndFinalize(
     metaDescription: string | null;
     h1: string | null;
     wordCount: number;
+    httpStatus: number | null;
+    screenshotPath: string | null;
   }[],
   evidenceItems: EvidenceWithRecommendation[],
   clientContext: { name: string | null; industry: string | null; conversionGoal: string | null }
@@ -213,16 +218,6 @@ async function scoreAndFinalize(
     .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
     .slice(0, 8);
 
-  const recommendationTexts = worstFindings
-    .map((f) => f.recommendationText)
-    .filter((r): r is string => Boolean(r))
-    .slice(0, 6);
-
-  const methodologyNote = isWordPress
-    ? "Scored across all 10 WII categories, including WordPress maintainability."
-    : "WordPress maintainability was not applicable for this site; its points were redistributed across the other 9 categories.";
-  const executiveSummary = buildExecutiveSummary(rootUrl, overallScore, grade, businessRisk);
-
   const roadmap = worstFindings.map((finding, index) => ({
     priorityRank: index + 1,
     title: finding.source.replace(/_/g, " "),
@@ -232,33 +227,44 @@ async function scoreAndFinalize(
     recommendation: finding.recommendationText ?? finding.finding,
   }));
 
-  const fullReport = {
-    rootUrl,
+  const screenshots = pages
+    .filter((p): p is typeof p & { screenshotPath: string } => Boolean(p.screenshotPath))
+    .slice(0, MAX_SCREENSHOTS_IN_REPORT)
+    .map((p) => ({ pageUrl: p.requestedUrl, path: p.screenshotPath }));
+
+  const reportData = buildReportData({
+    scan: {
+      rootUrl,
+      clientName: clientContext.name,
+      detectedCms: (isWordPress ? "wordpress" : "other") as DetectedCms,
+      pagesRequested,
+      pagesCrawled: pages.length,
+      generatedAt: new Date(),
+      pages: pages.map((p) => ({ url: p.requestedUrl, httpStatus: p.httpStatus, crawlStatus: p.crawlStatus })),
+    },
+    categoryScores: scoring.categoryScores,
+    evidenceItems,
+    recommendations: roadmap,
+    screenshots,
     overallScore,
     grade,
     businessRisk,
-    aiReadiness: aiReadiness.score,
+    aiReadiness,
     priority,
-    methodologyNote,
-    categoryScores: scoring.categoryScores.map((cs) => ({
-      category: cs.category,
-      score: cs.score,
-      maxScore: cs.maxScore,
-      rationale: cs.rationale,
-    })),
-    roadmap,
-    recommendations: recommendationTexts,
-    generatedAt: new Date().toISOString(),
-  };
+    qualitativeAssessment,
+  });
+
+  const html = buildReportHtml(reportData);
+  const pdfUrl = await generateReportPdf(html, scanId);
 
   await prisma.report.create({
     data: {
       scanId,
-      executiveSummary,
-      fullReport,
+      executiveSummary: reportData.executiveSummary,
+      fullReport: reportData as unknown as Prisma.InputJsonValue,
       qualitativeAssessment: (qualitativeAssessment as unknown as Prisma.InputJsonValue) ?? undefined,
-      html: buildReportHtml(fullReport),
-      pdfUrl: null,
+      html,
+      pdfUrl,
     },
   });
 
@@ -289,18 +295,4 @@ function estimateEffort(category: EvidenceCategory, source: string): "Low" | "Me
   if (source.includes("header") || source.includes("meta") || source.includes("title")) return "Low";
   if (category === "wordpress_maintainability" || category === "performance") return "Medium";
   return "Low";
-}
-
-function buildExecutiveSummary(
-  rootUrl: string,
-  overallScore: number,
-  grade: string,
-  businessRisk: string
-): string {
-  return (
-    `${rootUrl} scored ${overallScore}/100 (Grade ${grade}) on the Website Intelligence Index. ` +
-    `Overall business risk from this scan is ${businessRisk}. ` +
-    `See the category breakdown and evidence below for the specific findings driving this score, ` +
-    `and the priority roadmap for the highest-impact next steps.`
-  );
 }
