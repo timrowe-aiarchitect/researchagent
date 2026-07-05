@@ -90,6 +90,10 @@ export type CrawledPageData = {
   hasViewport: boolean;
   hasFavicon: boolean;
   hasCookieBannerMarkup: boolean;
+  /** At least one button/CTA-like element is positioned within the initial 1280x720 viewport. */
+  hasCtaAboveFold: boolean;
+  /** Body text mentions a free downloadable resource offered in exchange for contact info. */
+  hasLeadMagnet: boolean;
   metaGenerator: string | null;
   metaRobots: string | null;
   contactLinks: string[];
@@ -400,6 +404,8 @@ type DomExtraction = {
   hasViewport: boolean;
   hasFavicon: boolean;
   hasCookieBannerMarkup: boolean;
+  hasCtaAboveFold: boolean;
+  hasLeadMagnet: boolean;
   metaGenerator: string | null;
   metaRobots: string | null;
   assetSrcs: string[];
@@ -490,6 +496,22 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       return text.length > 0 && text.length < 2000 && /accept|reject|decline|consent|manage (cookie|preference)/.test(text);
     });
 
+    // Same CTA-like selector used for the `buttons` capture below, checked against the initial
+    // viewport (see the explicit { width: 1280, height: 720 } context viewport in crawlWebsite()).
+    const hasCtaAboveFold = [
+      ...document.querySelectorAll(
+        'button, [role="button"], input[type="submit"], input[type="button"], a.btn, a.button, a.cta'
+      ),
+    ].some((el) => {
+      const rect = el.getBoundingClientRect();
+      return rect.top < window.innerHeight && rect.bottom > 0 && rect.width > 0 && rect.height > 0;
+    });
+
+    const hasLeadMagnet =
+      /free (guide|ebook|e-book|checklist|template|whitepaper|white paper|download|report|toolkit|consultation)|download (our|the|a|your) (guide|ebook|checklist|whitepaper|report|toolkit)/i.test(
+        bodyText
+      );
+
     const headingSequence = [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((el) =>
       Number(el.tagName.slice(1))
     );
@@ -571,6 +593,8 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       hasViewport: Boolean(document.querySelector('meta[name="viewport"]')),
       hasFavicon: Boolean(document.querySelector('link[rel="icon"], link[rel="shortcut icon"]')),
       hasCookieBannerMarkup,
+      hasCtaAboveFold,
+      hasLeadMagnet,
       metaGenerator:
         (document.querySelector('meta[name="generator"]') as any)?.getAttribute("content") ?? null,
       metaRobots:
@@ -762,6 +786,8 @@ async function crawlSinglePage(
     hasViewport: false,
     hasFavicon: false,
     hasCookieBannerMarkup: false,
+    hasCtaAboveFold: false,
+    hasLeadMagnet: false,
     metaGenerator: null,
     metaRobots: null,
     contactLinks: [],
@@ -853,6 +879,8 @@ async function crawlSinglePage(
       hasViewport: dom.hasViewport,
       hasFavicon: dom.hasFavicon,
       hasCookieBannerMarkup: dom.hasCookieBannerMarkup,
+      hasCtaAboveFold: dom.hasCtaAboveFold,
+      hasLeadMagnet: dom.hasLeadMagnet,
       metaGenerator: dom.metaGenerator,
       metaRobots: dom.metaRobots,
       contactLinks: dom.contactLinks,
@@ -989,7 +1017,9 @@ export async function crawlWebsite({
   });
 
   try {
-    const context = await browser.newContext({ userAgent: USER_AGENT });
+    // Explicit so "above the fold" (hasCtaAboveFold) has a well-defined, documented viewport
+    // rather than depending on whatever Playwright's own default happens to be.
+    const context = await browser.newContext({ userAgent: USER_AGENT, viewport: { width: 1280, height: 720 } });
     try {
       while (visited.size < effectiveMaxPages) {
         const next = pickNextCandidate(candidates);
