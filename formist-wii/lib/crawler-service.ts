@@ -82,12 +82,15 @@ export type CrawledPageData = {
   hasFavicon: boolean;
   hasAnalyticsTag: boolean;
   metaGenerator: string | null;
+  metaRobots: string | null;
   contactLinks: string[];
   headers: Record<string, string>;
   isWordPress: boolean;
   wordpressVersion: string | null;
   wordpressPlugins: string[];
   loadTimeMs: number;
+  /** Number of redirect hops before reaching finalUrl (0 = no redirect). */
+  redirectChainLength: number;
   // Consumed only by the crawl-queue prioritization in crawlWebsite(), not persisted.
   navLinks: string[];
   footerLinks: string[];
@@ -236,6 +239,7 @@ type DomExtraction = {
   hasViewport: boolean;
   hasFavicon: boolean;
   metaGenerator: string | null;
+  metaRobots: string | null;
   assetSrcs: string[];
 };
 
@@ -315,6 +319,8 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       hasFavicon: Boolean(document.querySelector('link[rel="icon"], link[rel="shortcut icon"]')),
       metaGenerator:
         (document.querySelector('meta[name="generator"]') as any)?.getAttribute("content") ?? null,
+      metaRobots:
+        (document.querySelector('meta[name="robots"]') as any)?.getAttribute("content") ?? null,
       assetSrcs: [...document.querySelectorAll("link[href], script[src], img[src]")]
         .map((el) => {
           if (el instanceof HTMLLinkElement) return el.href;
@@ -386,12 +392,14 @@ async function crawlSinglePage(
     hasFavicon: false,
     hasAnalyticsTag: false,
     metaGenerator: null,
+    metaRobots: null,
     contactLinks: [],
     headers: {},
     isWordPress: false,
     wordpressVersion: null,
     wordpressPlugins: [],
     loadTimeMs: 0,
+    redirectChainLength: 0,
     navLinks: [],
     footerLinks: [],
   };
@@ -406,6 +414,13 @@ async function crawlSinglePage(
     const finalUrl = page.url();
     const headers = response?.headers() ?? {};
     const origin = new URL(url).origin;
+
+    let redirectChainLength = 0;
+    let redirectedRequest = response?.request().redirectedFrom() ?? null;
+    while (redirectedRequest) {
+      redirectChainLength++;
+      redirectedRequest = redirectedRequest.redirectedFrom();
+    }
 
     const dom = await extractDomData(page);
     const { internalLinks, externalLinks } = partitionLinks(dom.allLinks, origin);
@@ -443,12 +458,14 @@ async function crawlSinglePage(
       hasFavicon: dom.hasFavicon,
       hasAnalyticsTag: detectAnalyticsTag(dom.scripts),
       metaGenerator: dom.metaGenerator,
+      metaRobots: dom.metaRobots,
       contactLinks: dom.contactLinks,
       headers,
       isWordPress: wp.isWordPress,
       wordpressVersion: wp.version,
       wordpressPlugins: wp.plugins,
       loadTimeMs,
+      redirectChainLength,
       navLinks: dom.navLinks,
       footerLinks: dom.footerLinks,
     };
