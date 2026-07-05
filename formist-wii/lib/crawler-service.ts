@@ -89,7 +89,7 @@ export type CrawledPageData = {
   htmlLang: string | null;
   hasViewport: boolean;
   hasFavicon: boolean;
-  hasAnalyticsTag: boolean;
+  hasCookieBannerMarkup: boolean;
   metaGenerator: string | null;
   metaRobots: string | null;
   contactLinks: string[];
@@ -399,6 +399,7 @@ type DomExtraction = {
   htmlLang: string | null;
   hasViewport: boolean;
   hasFavicon: boolean;
+  hasCookieBannerMarkup: boolean;
   metaGenerator: string | null;
   metaRobots: string | null;
   assetSrcs: string[];
@@ -475,6 +476,20 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
     const firstParagraphText = firstParagraph ? (firstParagraph.textContent || "").trim() : "";
     const hasShortLeadParagraph = firstParagraphText.length >= 40 && firstParagraphText.length <= 300;
 
+    // Generic cookie-banner heuristic (distinct from known consent-management-platform vendor
+    // scripts, which are matched separately from script src/snippets): a reasonably small element
+    // whose id/class/aria-label mentions cookie/consent AND whose text reads like an actual banner
+    // (accept/reject/manage preferences), not just any element that happens to have "cookie" in a
+    // long utility-class list somewhere on the page.
+    const hasCookieBannerMarkup = [
+      ...document.querySelectorAll(
+        '[id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i], [aria-label*="cookie" i]'
+      ),
+    ].some((el) => {
+      const text = (el.textContent || "").toLowerCase();
+      return text.length > 0 && text.length < 2000 && /accept|reject|decline|consent|manage (cookie|preference)/.test(text);
+    });
+
     const headingSequence = [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((el) =>
       Number(el.tagName.slice(1))
     );
@@ -537,7 +552,9 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
         return {
           src,
           inline: !src,
-          snippet: !src ? (s.textContent || "").slice(0, 300) : null,
+          // 2000 chars (not the earlier 300) so vendor-detection regexes run against inline
+          // analytics/CMP loader snippets, which are often 500-1500 chars themselves.
+          snippet: !src ? (s.textContent || "").slice(0, 2000) : null,
         };
       }),
       allLinks: [...document.querySelectorAll("a[href]")].map((a) => (a as HTMLAnchorElement).href),
@@ -553,6 +570,7 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       htmlLang: document.documentElement.getAttribute("lang"),
       hasViewport: Boolean(document.querySelector('meta[name="viewport"]')),
       hasFavicon: Boolean(document.querySelector('link[rel="icon"], link[rel="shortcut icon"]')),
+      hasCookieBannerMarkup,
       metaGenerator:
         (document.querySelector('meta[name="generator"]') as any)?.getAttribute("content") ?? null,
       metaRobots:
@@ -627,18 +645,6 @@ async function runAxeAnalysis(
   } catch (err) {
     return { violations: null, error: err instanceof Error ? err.message : "Unknown axe-core error" };
   }
-}
-
-function detectAnalyticsTag(scripts: ScriptCapture[]): boolean {
-  return scripts.some((s) => {
-    const haystack = `${s.src ?? ""} ${s.snippet ?? ""}`;
-    return (
-      /googletagmanager\.com\/gtm\.js/i.test(haystack) ||
-      /gtag\(['"]config['"]/i.test(haystack) ||
-      /G-[A-Z0-9]{6,}/.test(haystack) ||
-      /UA-\d{4,}/.test(haystack)
-    );
-  });
 }
 
 const KNOWN_CACHING_PLUGIN_SLUGS = [
@@ -755,7 +761,7 @@ async function crawlSinglePage(
     htmlLang: null,
     hasViewport: false,
     hasFavicon: false,
-    hasAnalyticsTag: false,
+    hasCookieBannerMarkup: false,
     metaGenerator: null,
     metaRobots: null,
     contactLinks: [],
@@ -846,7 +852,7 @@ async function crawlSinglePage(
       htmlLang: dom.htmlLang,
       hasViewport: dom.hasViewport,
       hasFavicon: dom.hasFavicon,
-      hasAnalyticsTag: detectAnalyticsTag(dom.scripts),
+      hasCookieBannerMarkup: dom.hasCookieBannerMarkup,
       metaGenerator: dom.metaGenerator,
       metaRobots: dom.metaRobots,
       contactLinks: dom.contactLinks,
