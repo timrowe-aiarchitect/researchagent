@@ -1,4 +1,5 @@
 import type { CrawledPageData, WordPressDiagnostics } from "@/lib/crawler-service";
+import type { PageSpeedResult } from "@/lib/pagespeed-service";
 import type { EvidenceCategory, Severity } from "@/generated/prisma/enums";
 
 /**
@@ -31,6 +32,11 @@ export type ScanContext = {
   allPages: CrawledPageData[];
   /** Passive WordPress diagnostic fetches — null when the homepage wasn't detected as WordPress. */
   wordpressDiagnostics: WordPressDiagnostics | null;
+  /**
+   * PageSpeed Insights results for the homepage plus up to PSI_MAX_PRIORITY_PAGES other priority
+   * pages, keyed by requestedUrl. Pages not selected for PSI analysis have no entry here.
+   */
+  pageSpeedResults: Record<string, { mobile: PageSpeedResult; desktop: PageSpeedResult }>;
 };
 
 export type EvidenceExtractor = (scan: ScanContext, page: CrawledPageData) => NormalizedEvidence[];

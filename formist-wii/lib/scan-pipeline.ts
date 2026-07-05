@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { crawlWebsite, normalizeDomain } from "@/lib/crawler-service";
 import { extractAllEvidenceForPage, type ScanContext } from "@/lib/extractors";
+import { isCrawlOk } from "@/lib/extractors/types";
+import { fetchPageSpeedForPages, PSI_MAX_PRIORITY_PAGES } from "@/lib/pagespeed-service";
 import {
   computeCategoryScore,
   computeOverallScore,
@@ -46,6 +48,22 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       return;
     }
 
+    const homepageForPsi = crawl.pages.find((p) => p.requestedUrl === rootUrl) ?? crawl.pages[0];
+    // Priority pages, in crawl order, already reflect the crawler's nav/footer/keyword/sitemap
+    // tier prioritization (see crawlWebsite() in crawler-service.ts) — so the first
+    // PSI_MAX_PRIORITY_PAGES successfully-crawled non-homepage pages are the right sample.
+    const priorityPagesForPsi = crawl.pages
+      .filter((p) => isCrawlOk(p) && p.requestedUrl !== homepageForPsi?.requestedUrl)
+      .slice(0, PSI_MAX_PRIORITY_PAGES);
+    const pagesToAnalyzeForPsi = homepageForPsi
+      ? [homepageForPsi, ...priorityPagesForPsi]
+      : priorityPagesForPsi;
+
+    const pageSpeedResults = await fetchPageSpeedForPages(
+      pagesToAnalyzeForPsi.map((p) => p.requestedUrl),
+      process.env.PAGESPEED_API_KEY
+    );
+
     const scanContext: ScanContext = {
       scanId,
       rootUrl,
@@ -56,6 +74,7 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       llmsTxtFound: crawl.llmsTxtFound,
       allPages: crawl.pages,
       wordpressDiagnostics: crawl.wordpressDiagnostics,
+      pageSpeedResults,
     };
 
     const draftEvidence = crawl.pages.flatMap((page) => extractAllEvidenceForPage(scanContext, page));
