@@ -75,6 +75,7 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       allPages: crawl.pages,
       wordpressDiagnostics: crawl.wordpressDiagnostics,
       pageSpeedResults,
+      httpsRedirectCheck: crawl.httpsRedirectCheck,
     };
 
     const draftEvidence = crawl.pages.flatMap((page) => extractAllEvidenceForPage(scanContext, page));

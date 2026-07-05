@@ -163,6 +163,7 @@ export type CrawlWebsiteResult = {
   llmsTxtFound: boolean;
   pages: CrawledPageData[];
   wordpressDiagnostics: WordPressDiagnostics | null;
+  httpsRedirectCheck: HttpsRedirectCheck;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -298,6 +299,36 @@ export async function fetchWordPressDiagnostics(origin: string): Promise<WordPre
   }
 
   return { attempted: true, wpJson, restUsersEndpoint, xmlrpc, loginPage, latestCoreVersion };
+}
+
+export type HttpsRedirectCheck = {
+  /** False if nothing responded on plain HTTP at all (e.g. connection refused) — itself a fine
+   * outcome, since it means the site cannot be reached over an insecure channel. */
+  httpReachable: boolean;
+  finalUrl: string | null;
+  redirectsToHttps: boolean;
+};
+
+/**
+ * A single passive GET to the plain-HTTP form of the site's hostname (regardless of which scheme
+ * the scan was requested with), following redirects, to check whether HTTP traffic is upgraded to
+ * HTTPS. No credentials, no forms, no repeated/aggressive requests — one non-destructive request.
+ */
+export async function fetchHttpsRedirectCheck(hostname: string): Promise<HttpsRedirectCheck> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`http://${hostname}/`, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: { "User-Agent": USER_AGENT },
+    });
+    return { httpReachable: true, finalUrl: res.url, redirectsToHttps: res.url.startsWith("https://") };
+  } catch {
+    return { httpReachable: false, finalUrl: null, redirectsToHttps: false };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function partitionLinks(
@@ -933,10 +964,12 @@ export async function crawlWebsite({
       llmsTxtFound: false,
       pages: [],
       wordpressDiagnostics: null,
+      httpsRedirectCheck: { httpReachable: false, finalUrl: null, redirectsToHttps: false },
     };
   }
   const sitemapUrls = await fetchSitemapUrls(origin);
   const llmsTxtFound = await fetchLlmsTxtPresence(origin);
+  const httpsRedirectCheck = await fetchHttpsRedirectCheck(new URL(normalizedRoot).hostname);
 
   const visited = new Set<string>();
   const candidates = new Map<string, Tier>();
@@ -1005,5 +1038,6 @@ export async function crawlWebsite({
     llmsTxtFound,
     pages,
     wordpressDiagnostics,
+    httpsRedirectCheck,
   };
 }

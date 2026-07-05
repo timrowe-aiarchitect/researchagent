@@ -1,4 +1,4 @@
-import type { CrawledPageData, WordPressDiagnostics } from "@/lib/crawler-service";
+import type { CrawledPageData, HttpsRedirectCheck, WordPressDiagnostics } from "@/lib/crawler-service";
 import type { PageSpeedResult } from "@/lib/pagespeed-service";
 import type { EvidenceCategory, Severity } from "@/generated/prisma/enums";
 
@@ -37,6 +37,8 @@ export type ScanContext = {
    * pages, keyed by requestedUrl. Pages not selected for PSI analysis have no entry here.
    */
   pageSpeedResults: Record<string, { mobile: PageSpeedResult; desktop: PageSpeedResult }>;
+  /** A single passive check of whether plain-HTTP requests to the site get redirected to HTTPS. */
+  httpsRedirectCheck: HttpsRedirectCheck;
 };
 
 export type EvidenceExtractor = (scan: ScanContext, page: CrawledPageData) => NormalizedEvidence[];
