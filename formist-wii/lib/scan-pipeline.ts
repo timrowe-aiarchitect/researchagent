@@ -1,23 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import {
-  detectPluginSlugs,
-  detectWordPress,
-  extractCanonical,
-  extractFaviconPresence,
-  extractH1Count,
-  extractImgAltCoverage,
-  extractLinks,
-  extractMetaContent,
-  extractTitle,
-  fetchPage,
-  fetchRobots,
-  fetchSitemapPresence,
-  hasAnalyticsTag,
-  hasContactAffordance,
-  hasHtmlLangAttr,
-  hasJsonLd,
-  hasViewportMeta,
-} from "@/lib/crawler";
+import { crawlWebsite, normalizeDomain, type CrawledPageData } from "@/lib/crawler-service";
 import {
   computeCategoryScore,
   computeOverallScore,
@@ -29,7 +11,7 @@ import {
 } from "@/lib/scoring";
 import { buildReportHtml } from "@/lib/report-html";
 import type { Prisma } from "@/generated/prisma/client";
-import type { CrawlStatus, EvidenceCategory, Severity } from "@/generated/prisma/enums";
+import type { EvidenceCategory, Severity } from "@/generated/prisma/enums";
 
 const MAX_PAGES_HARD_CAP = 25;
 
@@ -57,11 +39,12 @@ export async function runScanPipeline(scanId: string): Promise<void> {
   });
 
   try {
-    const rootUrl = scan.client.rootUrl;
-    const origin = new URL(rootUrl).origin;
+    const rootUrl = normalizeDomain(scan.client.rootUrl);
+    const maxPages = Math.min(scan.pagesRequested, MAX_PAGES_HARD_CAP);
 
-    const robots = await fetchRobots(origin);
-    if (robots.disallowsAll) {
+    const crawl = await crawlWebsite({ rootUrl, scanId, maxPages });
+
+    if (crawl.blockedByRobots) {
       await prisma.scan.update({
         where: { id: scanId },
         data: {
@@ -73,73 +56,33 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       });
       return;
     }
-    const sitemapFound = await fetchSitemapPresence(origin);
 
-    const maxPages = Math.min(scan.pagesRequested, MAX_PAGES_HARD_CAP);
-    const visited = new Set<string>();
-    const queue: string[] = [rootUrl];
     const draftEvidence: DraftEvidence[] = [];
-    const pageTitles: { url: string; title: string | null }[] = [];
-    let homepageHtml: string | null = null;
-    let homepageHeaders: Record<string, string> = {};
-    let crawledCount = 0;
-
-    while (queue.length > 0 && crawledCount < maxPages) {
-      const url = queue.shift()!;
-      if (visited.has(url)) continue;
-      visited.add(url);
-
-      const fetched = await fetchPage(url);
-      crawledCount += 1;
-
-      await prisma.page.create({
-        data: {
-          scanId,
-          url: fetched.requestedUrl,
-          finalUrl: fetched.finalUrl,
-          httpStatus: fetched.httpStatus,
-          crawlStatus: fetched.crawlStatus as CrawlStatus,
-          rendered: false,
-        },
-      });
-
-      if (fetched.crawlStatus !== "success" && fetched.crawlStatus !== "redirect") {
+    for (const page of crawl.pages) {
+      if (page.crawlStatus !== "success" && page.crawlStatus !== "redirect") {
         draftEvidence.push({
-          url,
+          url: page.requestedUrl,
           category: "technical_seo",
           source: "page_reachable",
           severity: "major",
-          finding: `Page could not be crawled successfully (${fetched.crawlStatus}).`,
-          rawData: { crawlStatus: fetched.crawlStatus, httpStatus: fetched.httpStatus },
+          finding: `Page could not be crawled successfully (${page.crawlStatus}).`,
+          rawData: { crawlStatus: page.crawlStatus, httpStatus: page.httpStatus },
           confidence: 1,
           recommendationText: "Fix the underlying error so the page resolves with a 200 status.",
         });
         continue;
       }
-
-      if (url === rootUrl) {
-        homepageHtml = fetched.html;
-        homepageHeaders = fetched.headers;
-      }
-
-      if (!fetched.html) continue;
-      const html = fetched.html;
-
-      for (const link of extractLinks(html, fetched.finalUrl)) {
-        if (!visited.has(link) && queue.length + crawledCount < maxPages) {
-          queue.push(link);
-        }
-      }
-
-      draftEvidence.push(...buildPageEvidence(url, html));
-      pageTitles.push({ url, title: extractTitle(html) });
+      draftEvidence.push(...buildPageEvidence(page));
     }
 
     // Title uniqueness across the crawled sample (technical_seo / on_page_seo overlap — counted once here).
+    const successfulPages = crawl.pages.filter(
+      (p) => p.crawlStatus === "success" || p.crawlStatus === "redirect"
+    );
     const seenTitles = new Map<string, number>();
-    for (const { title } of pageTitles) {
-      if (!title) continue;
-      seenTitles.set(title, (seenTitles.get(title) ?? 0) + 1);
+    for (const page of successfulPages) {
+      if (!page.title) continue;
+      seenTitles.set(page.title, (seenTitles.get(page.title) ?? 0) + 1);
     }
     const duplicateTitleCount = [...seenTitles.values()].filter((c) => c > 1).length;
     draftEvidence.push({
@@ -151,7 +94,7 @@ export async function runScanPipeline(scanId: string): Promise<void> {
         duplicateTitleCount > 0
           ? `${duplicateTitleCount} title(s) are reused across multiple crawled pages.`
           : "All crawled pages have unique title tags.",
-      rawData: { duplicateTitleGroups: duplicateTitleCount, pagesChecked: pageTitles.length },
+      rawData: { duplicateTitleGroups: duplicateTitleCount, pagesChecked: successfulPages.length },
       confidence: 0.95,
       recommendationText:
         duplicateTitleCount > 0 ? "Give each page a unique, descriptive title tag." : null,
@@ -162,62 +105,58 @@ export async function runScanPipeline(scanId: string): Promise<void> {
         url: null,
         category: "technical_seo",
         source: "robots_txt",
-        severity: robots.fetched ? "info" : "minor",
-        finding: robots.fetched
+        severity: crawl.robotsFound ? "info" : "minor",
+        finding: crawl.robotsFound
           ? "robots.txt is present and does not block crawling entirely."
           : "No robots.txt file was found.",
-        rawData: { present: robots.fetched },
+        rawData: { present: crawl.robotsFound },
         confidence: 1,
-        recommendationText: robots.fetched ? null : "Add a robots.txt file at the site root.",
+        recommendationText: crawl.robotsFound ? null : "Add a robots.txt file at the site root.",
       },
       {
         url: null,
         category: "technical_seo",
         source: "sitemap_xml",
-        severity: sitemapFound ? "info" : "minor",
-        finding: sitemapFound
+        severity: crawl.sitemapFound ? "info" : "minor",
+        finding: crawl.sitemapFound
           ? "sitemap.xml was found at the site root."
           : "No sitemap.xml was found at the site root.",
-        rawData: { present: sitemapFound },
+        rawData: { present: crawl.sitemapFound },
         confidence: 1,
-        recommendationText: sitemapFound
+        recommendationText: crawl.sitemapFound
           ? null
           : "Publish an XML sitemap and reference it from robots.txt.",
       }
     );
 
-    // Site-level: WordPress detection + security headers, evaluated from the homepage response.
-    let isWordPress = false;
-    if (homepageHtml) {
-      const wp = detectWordPress(homepageHtml);
-      isWordPress = wp.isWordPress;
-      if (wp.isWordPress) {
-        draftEvidence.push({
-          url: rootUrl,
-          category: "wordpress_maintainability",
-          source: "wp_version_disclosed",
-          severity: wp.version ? "minor" : "info",
-          finding: wp.version
-            ? `WordPress core version ${wp.version} is publicly disclosed via the generator meta tag.`
-            : "WordPress was detected but the core version is not publicly disclosed.",
-          rawData: { version: wp.version },
-          confidence: 0.9,
-          recommendationText: wp.version
-            ? "Remove the generator meta tag to avoid advertising the exact core version to attackers."
-            : null,
-        });
-        const plugins = detectPluginSlugs(homepageHtml);
-        draftEvidence.push({
-          url: rootUrl,
-          category: "wordpress_maintainability",
-          source: "plugin_inventory",
-          severity: "info",
-          finding: `${plugins.length} plugin(s) detectable from public page markup.`,
-          rawData: { plugins },
-          confidence: 0.75,
-          recommendationText: null,
-        });
-      }
+    // Site-level: WordPress detection + security headers, evaluated from the homepage.
+    const homepage = crawl.pages.find((p) => p.requestedUrl === rootUrl) ?? crawl.pages[0];
+    const isWordPress = homepage?.isWordPress ?? false;
+    if (homepage && isWordPress) {
+      draftEvidence.push({
+        url: rootUrl,
+        category: "wordpress_maintainability",
+        source: "wp_version_disclosed",
+        severity: homepage.wordpressVersion ? "minor" : "info",
+        finding: homepage.wordpressVersion
+          ? `WordPress core version ${homepage.wordpressVersion} is publicly disclosed via the generator meta tag.`
+          : "WordPress was detected but the core version is not publicly disclosed.",
+        rawData: { version: homepage.wordpressVersion },
+        confidence: 0.9,
+        recommendationText: homepage.wordpressVersion
+          ? "Remove the generator meta tag to avoid advertising the exact core version to attackers."
+          : null,
+      });
+      draftEvidence.push({
+        url: rootUrl,
+        category: "wordpress_maintainability",
+        source: "plugin_inventory",
+        severity: "info",
+        finding: `${homepage.wordpressPlugins.length} plugin(s) detectable from public page markup.`,
+        rawData: { plugins: homepage.wordpressPlugins },
+        confidence: 0.75,
+        recommendationText: null,
+      });
     }
 
     await prisma.client.update({
@@ -225,9 +164,9 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       data: { detectedCms: isWordPress ? "wordpress" : "other" },
     });
 
-    if (homepageHtml) {
+    if (homepage) {
       // Homepage-scoped security header checks (cheap, high-signal — not repeated per page).
-      draftEvidence.push(...buildSecurityHeaderEvidence(rootUrl, homepageHeaders));
+      draftEvidence.push(...buildSecurityHeaderEvidence(rootUrl, homepage.headers));
     }
 
     const createdEvidence = await prisma.evidenceItem.createManyAndReturn({
@@ -251,7 +190,7 @@ export async function runScanPipeline(scanId: string): Promise<void> {
 
     await prisma.scan.update({
       where: { id: scanId },
-      data: { status: "scoring", pagesCrawled: crawledCount },
+      data: { status: "scoring", pagesCrawled: crawl.pages.length },
     });
 
     await scoreAndFinalize(scanId, isWordPress, rootUrl, evidenceWithRecommendation);
@@ -267,25 +206,23 @@ export async function runScanPipeline(scanId: string): Promise<void> {
   }
 }
 
-function buildPageEvidence(url: string, html: string): DraftEvidence[] {
-  const items: DraftEvidence[] = [];
-  const title = extractTitle(html);
-  const description = extractMetaContent(html, "description");
-  const canonical = extractCanonical(html);
-  const h1Count = extractH1Count(html);
-  const { total: imgTotal, withAlt: imgWithAlt } = extractImgAltCoverage(html);
+function buildPageEvidence(page: CrawledPageData): DraftEvidence[] {
+  const url = page.requestedUrl;
+  const title = page.title;
+  const description = page.metaDescription;
+  const canonical = page.canonical;
+  const h1Count = page.h1Count;
+  const imgTotal = page.images.length;
+  const imgWithAlt = page.images.filter((img) => Boolean(img.alt && img.alt.trim())).length;
   const isHttps = new URL(url).protocol === "https:";
   const titleOk = title !== null && title.length >= 10 && title.length <= 60;
   const descriptionOk = description !== null && description.length <= 160;
   const imagesOk = imgTotal === 0 || imgWithAlt === imgTotal;
-  const hasLang = hasHtmlLangAttr(html);
-  const hasStructuredData = hasJsonLd(html);
-  const hasViewport = hasViewportMeta(html);
-  const hasFavicon = extractFaviconPresence(html);
-  const hasAnalytics = hasAnalyticsTag(html);
-  const hasContact = hasContactAffordance(html);
+  const hasLang = Boolean(page.htmlLang);
+  const hasStructuredData = page.jsonLd.length > 0;
+  const hasContact = page.forms.length > 0 || page.contactLinks.length > 0;
 
-  items.push(
+  return [
     {
       url,
       category: "on_page_seo",
@@ -380,7 +317,7 @@ function buildPageEvidence(url: string, html: string): DraftEvidence[] {
       finding: hasStructuredData
         ? "Page includes JSON-LD structured data."
         : "No JSON-LD structured data was found.",
-      rawData: { present: hasStructuredData },
+      rawData: { present: hasStructuredData, count: page.jsonLd.length },
       confidence: 0.9,
       recommendationText: hasStructuredData
         ? null
@@ -390,13 +327,13 @@ function buildPageEvidence(url: string, html: string): DraftEvidence[] {
       url,
       category: "brand_experience",
       source: "mobile_viewport",
-      severity: hasViewport ? "info" : "moderate",
-      finding: hasViewport
+      severity: page.hasViewport ? "info" : "moderate",
+      finding: page.hasViewport
         ? "Page declares a responsive viewport meta tag."
         : "No responsive viewport meta tag was found.",
-      rawData: { present: hasViewport },
+      rawData: { present: page.hasViewport },
       confidence: 0.95,
-      recommendationText: hasViewport
+      recommendationText: page.hasViewport
         ? null
         : "Add a viewport meta tag so the page renders correctly on mobile devices.",
     },
@@ -404,11 +341,11 @@ function buildPageEvidence(url: string, html: string): DraftEvidence[] {
       url,
       category: "brand_experience",
       source: "favicon",
-      severity: hasFavicon ? "info" : "minor",
-      finding: hasFavicon ? "Page declares a favicon." : "No favicon link tag was found.",
-      rawData: { present: hasFavicon },
+      severity: page.hasFavicon ? "info" : "minor",
+      finding: page.hasFavicon ? "Page declares a favicon." : "No favicon link tag was found.",
+      rawData: { present: page.hasFavicon },
       confidence: 0.9,
-      recommendationText: hasFavicon
+      recommendationText: page.hasFavicon
         ? null
         : "Add a favicon for brand consistency in browser tabs.",
     },
@@ -416,13 +353,13 @@ function buildPageEvidence(url: string, html: string): DraftEvidence[] {
       url,
       category: "analytics",
       source: "analytics_tag",
-      severity: hasAnalytics ? "info" : "moderate",
-      finding: hasAnalytics
+      severity: page.hasAnalyticsTag ? "info" : "moderate",
+      finding: page.hasAnalyticsTag
         ? "A recognizable analytics/tag-manager snippet was detected."
         : "No recognizable analytics or tag-manager snippet was detected.",
-      rawData: { present: hasAnalytics },
+      rawData: { present: page.hasAnalyticsTag },
       confidence: 0.85,
-      recommendationText: hasAnalytics
+      recommendationText: page.hasAnalyticsTag
         ? null
         : "Install GA4 or a tag manager so traffic and conversions can be measured.",
     },
@@ -434,15 +371,13 @@ function buildPageEvidence(url: string, html: string): DraftEvidence[] {
       finding: hasContact
         ? "Page includes a form, mailto:, or tel: contact affordance."
         : "No form, mailto:, or tel: contact affordance found on this page.",
-      rawData: { present: hasContact },
+      rawData: { present: hasContact, forms: page.forms.length, contactLinks: page.contactLinks.length },
       confidence: 0.9,
       recommendationText: hasContact
         ? null
         : "Add a clear call-to-action or contact method on this page.",
-    }
-  );
-
-  return items;
+    },
+  ];
 }
 
 function buildSecurityHeaderEvidence(

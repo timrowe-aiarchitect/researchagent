@@ -14,17 +14,23 @@ in the repo root for the full product spec (scoring model, data model, acceptanc
   environment's egress policy, so components live directly in `components/ui`)
 - Prisma + Postgres (Prisma 7, `prisma-client` generator with the `@prisma/adapter-pg` driver
   adapter — see `lib/prisma.ts`)
+- Playwright for the crawler (rendered HTML, screenshots) — see `lib/crawler-service.ts`
 - BullMQ + Redis for the scan job queue
 - Zod for request validation
+- Vitest for tests
 
 ## Local setup
 
 1. Copy `.env.example` to `.env` and point `DATABASE_URL`/`REDIS_URL` at a local Postgres and
-   Redis instance.
+   Redis instance. If your installed `playwright` package version doesn't match a Chromium
+   build already on disk (common in locked-down sandboxes), also set
+   `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to that browser's binary.
 2. Install dependencies: `npm install` (runs `prisma generate` via `postinstall`).
 3. Apply migrations: `npm run db:migrate`.
 4. Run the web app: `npm run dev`.
 5. In a second terminal, run the scan worker: `npm run worker`.
+6. Run tests: `npm test` (needs a reachable Postgres — the crawler tests persist to and clean
+   up from the real `Page`/`Scan`/`Client` tables).
 
 Scans won't progress past `queued` unless the worker is running — the `/api/scans/[id]/run`
 route only enqueues the BullMQ job.
@@ -32,13 +38,20 @@ route only enqueues the BullMQ job.
 ## How a scan flows
 
 1. `POST /api/scans` — validates the URL (must be a public http(s) address; rejects
-   localhost/private-network hosts), creates/reuses a `Website` row by root URL, and creates a
-   `Run` (status `queued`).
-2. `POST /api/scans/[id]/run` — enqueues a BullMQ job for that run.
+   localhost/private-network hosts), creates/reuses a `Client` row by root URL, and creates a
+   `Scan` (status `queued`).
+2. `POST /api/scans/[id]/run` — enqueues a BullMQ job for that scan.
 3. The worker (`worker/scan-worker.ts`) picks up the job and runs the pipeline in
-   `lib/scan-pipeline.ts`: crawls up to 25 pages breadth-first from the homepage, collects
-   evidence across all 10 WII categories, scores each category and the overall index
-   (`lib/scoring.ts`), and writes a `Report` + prioritized `RoadmapItem`s.
+   `lib/scan-pipeline.ts`:
+   - `lib/crawler-service.ts` crawls up to 25 same-domain pages via Playwright, prioritizing the
+     homepage, top-nav links, footer links, keyword pages (about/contact/services/offering/
+     pricing/blog), then sitemap.xml entries, then everything else discovered. Each page is
+     rendered, its data captured (title, meta, headings, word count, links, images, forms,
+     buttons, JSON-LD, Open Graph, scripts, a full-page screenshot under `public/screenshots/`),
+     rate-limited between requests, and persisted as a `Page` row immediately.
+   - the pipeline turns that captured data into `EvidenceItem`s across all 10 WII categories,
+     scores each category and the overall index (`lib/scoring.ts`), and writes a `Report` +
+     prioritized `Recommendation`s.
 4. `GET /api/scans/[id]` — poll for status (`queued` → `crawling` → `scoring` → `complete`/`failed`).
 5. `GET /api/reports/[id]` — the full report payload once complete.
 
@@ -52,9 +65,9 @@ route only enqueues the BullMQ job.
 
 ## Known MVP limitations
 
-- The crawler uses plain `fetch` + regex-based HTML parsing, not a headless browser — it won't
-  see content that only renders after client-side JavaScript runs.
 - PDF export is browser print-to-PDF (`window.print()` with print-specific styling), not a
   server-rendered PDF file.
 - WordPress plugin/version checks are based on public markup only (no vulnerability database
   lookup).
+- robots.txt handling only checks for a wildcard (`User-agent: *`) disallow-all rule; per-path
+  disallow rules aren't enforced against individual crawl candidates yet.

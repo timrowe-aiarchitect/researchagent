@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "postinstall": "prisma generate",
     "worker": "tsx watch worker/scan-worker.ts",
     "db:migrate": "prisma migrate dev",
@@ -26,6 +27,7 @@
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
     "pg": "^8.22.0",
+    "playwright": "^1.61.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.6.0",
@@ -44,6 +46,7 @@
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }

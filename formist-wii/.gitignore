@@ -43,6 +43,9 @@ next-env.d.ts
 
 /generated/prisma
 
+# Runtime-generated crawl screenshots (see lib/crawler-service.ts)
+/public/screenshots/
+
 # The repo-root .gitignore (shared with the unrelated Python service in this monorepo) has a
 # bare `lib/` rule intended for Python build output. Un-ignore this app's own lib/ directory.
 !/lib/
