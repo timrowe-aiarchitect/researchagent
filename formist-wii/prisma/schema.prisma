@@ -179,14 +179,18 @@ model Recommendation {
 }
 
 model Report {
-  id               String   @id @default(cuid())
-  scanId           String   @unique @map("scan_id")
-  scan             Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
-  executiveSummary String   @map("executive_summary")
-  fullReport       Json     @map("full_report")
-  html             String
-  pdfUrl           String?  @map("pdf_url")
-  generatedAt      DateTime @default(now()) @map("generated_at")
+  id                     String   @id @default(cuid())
+  scanId                 String   @unique @map("scan_id")
+  scan                   Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  executiveSummary       String   @map("executive_summary")
+  fullReport             Json     @map("full_report")
+  /// LLM-generated qualitative narrative (brand clarity, UX, conversion, trust, AI discoverability)
+  /// — additive only. Never read by lib/scoring.ts and never influences any deterministic score;
+  /// null whenever the assessment wasn't generated (no API key configured, or the call failed).
+  qualitativeAssessment  Json?    @map("qualitative_assessment")
+  html                   String
+  pdfUrl                 String?  @map("pdf_url")
+  generatedAt            DateTime @default(now()) @map("generated_at")
 
   @@map("reports")
 }

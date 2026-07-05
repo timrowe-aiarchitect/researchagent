@@ -7,6 +7,7 @@ import {
   deriveAiReadiness,
   deriveBusinessRisk,
 } from "@/lib/scoring";
+import type { QualitativeAssessment } from "@/lib/qualitative-assessment";
 import type { EvidenceCategory } from "@/generated/prisma/enums";
 
 /**
@@ -97,6 +98,9 @@ export async function getReportPayload(id: string) {
     businessRisk,
     aiReadiness,
     priority,
+    // Additive LLM-generated narrative — null whenever it wasn't generated. Never used to derive
+    // any score above; those all come from CategoryScore rows and evidence only.
+    qualitativeAssessment: report.qualitativeAssessment as QualitativeAssessment | null,
     executiveSummary: report.executiveSummary,
     methodologyNote,
     recommendations: scan.recommendations

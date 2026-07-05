@@ -4,6 +4,7 @@ import { extractAllEvidenceForPage, type ScanContext } from "@/lib/extractors";
 import { isCrawlOk } from "@/lib/extractors/types";
 import { fetchPageSpeedForPages, PSI_MAX_PRIORITY_PAGES } from "@/lib/pagespeed-service";
 import { computeScanScore, isPassing } from "@/lib/scoring";
+import { generateQualitativeAssessment } from "@/lib/qualitative-assessment";
 import { buildReportHtml } from "@/lib/report-html";
 import type { Prisma } from "@/generated/prisma/client";
 import type { CrawlStatus, EvidenceCategory, Severity } from "@/generated/prisma/enums";
@@ -133,7 +134,14 @@ async function scoreAndFinalize(
   isWordPress: boolean,
   rootUrl: string,
   pagesRequested: number,
-  pages: { crawlStatus: CrawlStatus }[],
+  pages: {
+    crawlStatus: CrawlStatus;
+    requestedUrl: string;
+    title: string | null;
+    metaDescription: string | null;
+    h1: string | null;
+    wordCount: number;
+  }[],
   evidenceItems: EvidenceWithRecommendation[]
 ): Promise<void> {
   const scoring = computeScanScore({
@@ -163,6 +171,30 @@ async function scoreAndFinalize(
   }
 
   const { overallScore, grade, businessRisk, aiReadiness, priority } = scoring;
+
+  // Purely additive narrative layer — computed from the same evidence, but never fed back into
+  // any score above. Gracefully resolves to null (no API key, network failure, bad response) so
+  // it can never fail or alter the scan.
+  const qualitativeAssessment = await generateQualitativeAssessment({
+    rootUrl,
+    pages: pages
+      .filter((p) => p.crawlStatus === "success" || p.crawlStatus === "redirect")
+      .map((p) => ({
+        url: p.requestedUrl,
+        title: p.title,
+        metaDescription: p.metaDescription,
+        h1: p.h1,
+        wordCount: p.wordCount,
+      })),
+    evidence: evidenceItems.map((e) => ({
+      category: e.category,
+      source: e.source,
+      severity: e.severity,
+      finding: e.finding,
+      confidence: e.confidence,
+      url: e.url,
+    })),
+  });
 
   const failingByCheck = new Map<string, (typeof evidenceItems)[number]>();
   for (const item of evidenceItems) {
@@ -220,6 +252,7 @@ async function scoreAndFinalize(
       scanId,
       executiveSummary,
       fullReport,
+      qualitativeAssessment: (qualitativeAssessment as unknown as Prisma.InputJsonValue) ?? undefined,
       html: buildReportHtml(fullReport),
       pdfUrl: null,
     },
