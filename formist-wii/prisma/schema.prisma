@@ -1,0 +1,190 @@
+// Website Intelligence Index (WII) — Prisma schema
+// Mirrors the data model defined in docs/PRD-website-intelligence-index-mvp.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DetectedCms {
+  wordpress
+  other
+  unknown
+}
+
+enum RunStatus {
+  queued
+  crawling
+  scoring
+  complete
+  failed
+}
+
+enum CrawlStatus {
+  success
+  timeout
+  blocked_by_robots
+  error
+  redirect
+}
+
+enum EvidenceCategory {
+  technical_seo
+  on_page_seo
+  ai_discoverability
+  performance
+  accessibility
+  security
+  analytics
+  wordpress_maintainability
+  brand_experience
+  conversion
+}
+
+enum Severity {
+  info
+  minor
+  moderate
+  major
+  critical
+}
+
+enum BusinessRisk {
+  low
+  medium
+  high
+  critical
+}
+
+enum Grade {
+  A
+  B
+  C
+  D
+  F
+}
+
+model Website {
+  id           String      @id @default(cuid())
+  rootUrl      String      @unique @map("root_url")
+  detectedCms  DetectedCms @default(unknown) @map("detected_cms")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  runs Run[]
+
+  @@map("websites")
+}
+
+model Run {
+  id             String    @id @default(cuid())
+  websiteId      String    @map("website_id")
+  website        Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  requestedBy    String    @map("requested_by")
+  status         RunStatus @default(queued)
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  pagesRequested Int       @default(25) @map("pages_requested")
+  pagesCrawled   Int       @default(0) @map("pages_crawled_count")
+  failureReason  String?   @map("failure_reason")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  pages          Page[]
+  evidenceItems  EvidenceItem[]
+  categoryScores CategoryScore[]
+  report         Report?
+
+  @@index([websiteId])
+  @@index([status])
+  @@map("runs")
+}
+
+model Page {
+  id          String      @id @default(cuid())
+  runId       String      @map("run_id")
+  run         Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  url         String
+  httpStatus  Int?        @map("http_status")
+  crawlStatus CrawlStatus @map("crawl_status")
+  finalUrl    String?     @map("final_url")
+  rendered    Boolean     @default(false)
+  fetchedAt   DateTime    @default(now()) @map("fetched_at")
+
+  evidenceItems EvidenceItem[]
+
+  @@index([runId])
+  @@map("pages")
+}
+
+model EvidenceItem {
+  id             String           @id @default(cuid())
+  runId          String           @map("run_id")
+  run            Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  pageId         String?          @map("page_id")
+  page           Page?            @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  category       EvidenceCategory
+  checkName      String           @map("check_name")
+  observedValue  String           @map("observed_value")
+  severity       Severity
+  passed         Boolean
+  detail         String
+  recommendation String?
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  @@index([runId, category])
+  @@index([pageId])
+  @@map("evidence_items")
+}
+
+model CategoryScore {
+  id          String           @id @default(cuid())
+  runId       String           @map("run_id")
+  run         Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  category    EvidenceCategory
+  score       Float
+  summary     String
+  evidenceIds String[]         @map("evidence_ids")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@unique([runId, category])
+  @@map("category_scores")
+}
+
+model Report {
+  id            String       @id @default(cuid())
+  runId         String       @unique @map("run_id")
+  run           Run          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  overallScore    Float        @map("overall_score")
+  grade           Grade
+  businessRisk    BusinessRisk @map("business_risk")
+  aiReadiness     Float        @map("ai_readiness")
+  executiveSummary String      @map("executive_summary")
+  recommendations String[]    @map("recommendations")
+  methodologyNote String      @map("methodology_note")
+  pdfUrl          String?     @map("pdf_url")
+  generatedAt     DateTime    @default(now()) @map("generated_at")
+
+  roadmapItems RoadmapItem[]
+
+  @@map("reports")
+}
+
+model RoadmapItem {
+  id               String           @id @default(cuid())
+  reportId         String           @map("report_id")
+  report           Report           @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  priorityRank     Int              @map("priority_rank")
+  title            String
+  category         EvidenceCategory
+  impact           String
+  effort           String
+  recommendation   String
+  linkedEvidenceIds String[]        @map("linked_evidence_ids")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  @@index([reportId])
+  @@map("roadmap_items")
+}
