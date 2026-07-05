@@ -13,6 +13,15 @@ const SCREENSHOT_TIMEOUT_MS = 10000;
 const RATE_LIMIT_DELAY_MS = 500;
 const FETCH_TIMEOUT_MS = 8000;
 const USER_AGENT = "FormistWiiBot/0.1 (+https://formist.studio/wii)";
+const AXE_TIMEOUT_MS = 15000;
+// Homepage + this many other priority pages get an axe-core accessibility scan (mirrors the
+// PageSpeed Insights priority sample in lib/pagespeed-service.ts).
+const AXE_MAX_PRIORITY_PAGES = 10;
+// Read once at module load and reused across every page's injectScriptTag() call.
+const AXE_SOURCE = fs.readFileSync(
+  path.join(process.cwd(), "node_modules", "axe-core", "axe.min.js"),
+  "utf-8"
+);
 
 // Lower tier = higher crawl priority. See "Prioritize homepage, top nav pages, footer
 // links, about, contact, services, offering, pricing, blog, and sitemap URLs."
@@ -102,9 +111,32 @@ export type CrawledPageData = {
   hasTrustKeywords: boolean;
   hasFaqPattern: boolean;
   hasShortLeadParagraph: boolean;
+  /** Heading levels (1-6) in document order — used to detect skipped levels (e.g. h2 -> h4). */
+  headingSequence: number[];
+  formFieldTotal: number;
+  formFieldLabelled: number;
+  linkTexts: LinkTextCapture[];
+  /**
+   * axe-core violations for this page, grouped by rule (axe's own result shape already groups by
+   * rule ID, one entry per rule with all affected elements). null means axe wasn't run on this
+   * page at all — either it's outside the homepage + AXE_MAX_PRIORITY_PAGES sample, or the run
+   * failed (see axeError). An empty array means axe ran successfully and found zero violations.
+   */
+  axeViolations: AxeViolationSummary[] | null;
+  axeError: string | null;
   // Consumed only by the crawl-queue prioritization in crawlWebsite(), not persisted.
   navLinks: string[];
   footerLinks: string[];
+};
+
+export type LinkTextCapture = { text: string; hasAccessibleName: boolean };
+
+export type AxeViolationSummary = {
+  ruleId: string;
+  impact: "minor" | "moderate" | "serious" | "critical" | null;
+  description: string;
+  helpUrl: string;
+  affectedElementCount: number;
 };
 
 /**
@@ -351,6 +383,10 @@ type DomExtraction = {
   hasTrustKeywords: boolean;
   hasFaqPattern: boolean;
   hasShortLeadParagraph: boolean;
+  headingSequence: number[];
+  formFieldTotal: number;
+  formFieldLabelled: number;
+  linkTexts: LinkTextCapture[];
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- runs inside the browser page, not this module's TS scope */
@@ -407,6 +443,34 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
     const firstParagraph = document.querySelector("p");
     const firstParagraphText = firstParagraph ? (firstParagraph.textContent || "").trim() : "";
     const hasShortLeadParagraph = firstParagraphText.length >= 40 && firstParagraphText.length <= 300;
+
+    const headingSequence = [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((el) =>
+      Number(el.tagName.slice(1))
+    );
+
+    const labelForTargets = new Set(
+      [...document.querySelectorAll("label[for]")].map((l) => l.getAttribute("for") || "")
+    );
+    const formControls = [...document.querySelectorAll("form input, form textarea, form select")].filter(
+      (el) => {
+        const type = (el.getAttribute("type") || "").toLowerCase();
+        return !["hidden", "submit", "button", "image", "reset"].includes(type);
+      }
+    );
+    const formFieldTotal = formControls.length;
+    const formFieldLabelled = formControls.filter((el) => {
+      const id = el.getAttribute("id");
+      const wrappedInLabel = Boolean(el.closest("label"));
+      const ariaLabel = el.getAttribute("aria-label");
+      const ariaLabelledby = el.getAttribute("aria-labelledby");
+      return Boolean((id && labelForTargets.has(id)) || wrappedInLabel || ariaLabel || ariaLabelledby);
+    }).length;
+
+    const linkTexts = [...document.querySelectorAll("a[href]")].map((a) => {
+      const text = (a.textContent || "").trim();
+      const ariaLabel = a.getAttribute("aria-label");
+      return { text, hasAccessibleName: Boolean(text || ariaLabel) };
+    });
 
     return {
       title: document.title || null,
@@ -482,10 +546,57 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       hasTrustKeywords,
       hasFaqPattern,
       hasShortLeadParagraph,
+      headingSequence,
+      formFieldTotal,
+      formFieldLabelled,
+      linkTexts,
     };
   });
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+type RawAxeViolation = {
+  id: string;
+  impact?: "minor" | "moderate" | "serious" | "critical" | null;
+  description: string;
+  helpUrl: string;
+  nodes?: unknown[];
+};
+type WindowWithAxe = {
+  axe: { run: (context: unknown, options: unknown) => Promise<{ violations: RawAxeViolation[] }> };
+};
+
+/**
+ * Injects axe-core and runs an automated accessibility scan. Never throws — injection failures
+ * (e.g. a strict CSP blocking inline scripts) and timeouts both degrade to a null violations
+ * array with `error` set, so one page's failure doesn't affect the rest of the crawl. This is
+ * automated screening only: it surfaces axe-core's programmatically detectable violations, not a
+ * full WCAG compliance audit (many WCAG success criteria require human judgment).
+ */
+async function runAxeAnalysis(
+  page: PlaywrightPage
+): Promise<{ violations: AxeViolationSummary[] | null; error: string | null }> {
+  try {
+    await page.addScriptTag({ content: AXE_SOURCE });
+    const resultPromise = page.evaluate(() =>
+      (window as unknown as WindowWithAxe).axe.run(document, { resultTypes: ["violations"] })
+    );
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("axe-core analysis timed out")), AXE_TIMEOUT_MS);
+    });
+    const raw = await Promise.race([resultPromise, timeoutPromise]);
+    const violations: AxeViolationSummary[] = raw.violations.map((v) => ({
+      ruleId: v.id,
+      impact: v.impact ?? null,
+      description: v.description,
+      helpUrl: v.helpUrl,
+      affectedElementCount: v.nodes?.length ?? 0,
+    }));
+    return { violations, error: null };
+  } catch (err) {
+    return { violations: null, error: err instanceof Error ? err.message : "Unknown axe-core error" };
+  }
+}
 
 function detectAnalyticsTag(scripts: ScriptCapture[]): boolean {
   return scripts.some((s) => {
@@ -590,7 +701,8 @@ async function crawlSinglePage(
   page: PlaywrightPage,
   url: string,
   scanId: string,
-  navTimeoutMs: number
+  navTimeoutMs: number,
+  runAxe: boolean
 ): Promise<CrawledPageData> {
   const empty: Omit<CrawledPageData, "requestedUrl" | "finalUrl" | "httpStatus" | "crawlStatus"> = {
     title: null,
@@ -633,6 +745,12 @@ async function crawlSinglePage(
     hasTrustKeywords: false,
     hasFaqPattern: false,
     hasShortLeadParagraph: false,
+    headingSequence: [],
+    formFieldTotal: 0,
+    formFieldLabelled: 0,
+    linkTexts: [],
+    axeViolations: null,
+    axeError: null,
     navLinks: [],
     footerLinks: [],
   };
@@ -664,6 +782,9 @@ async function crawlSinglePage(
     const footerLinks = partitionLinks(dom.footerLinks, origin).internalLinks;
     const screenshotPath = await captureScreenshot(page, scanId, url);
     const wp = detectWordPress(dom.metaGenerator, dom.assetSrcs);
+    const axe = runAxe
+      ? await runAxeAnalysis(page)
+      : { violations: null, error: null };
 
     let crawlStatus: CrawlStatus = "success";
     if (httpStatus !== null && httpStatus >= 400) crawlStatus = "error";
@@ -715,6 +836,12 @@ async function crawlSinglePage(
       hasTrustKeywords: dom.hasTrustKeywords,
       hasFaqPattern: dom.hasFaqPattern,
       hasShortLeadParagraph: dom.hasShortLeadParagraph,
+      headingSequence: dom.headingSequence,
+      formFieldTotal: dom.formFieldTotal,
+      formFieldLabelled: dom.formFieldLabelled,
+      linkTexts: dom.linkTexts,
+      axeViolations: axe.violations,
+      axeError: axe.error,
       navLinks,
       footerLinks,
     };
@@ -834,10 +961,15 @@ export async function crawlWebsite({
 
         if (visited.size > 1) await sleep(rateLimitDelayMs);
 
+        // The crawl order already follows the same nav/footer/keyword/sitemap tier
+        // prioritization used elsewhere, so the homepage + first AXE_MAX_PRIORITY_PAGES pages
+        // visited are the right sample for an axe-core accessibility scan.
+        const runAxe = visited.size <= AXE_MAX_PRIORITY_PAGES + 1;
+
         const page = await context.newPage();
         let result: CrawledPageData;
         try {
-          result = await crawlSinglePage(page, next, scanId, navTimeoutMs);
+          result = await crawlSinglePage(page, next, scanId, navTimeoutMs, runAxe);
         } finally {
           await page.close();
         }
