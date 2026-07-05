@@ -94,6 +94,16 @@ export type CrawledPageData = {
   hasCtaAboveFold: boolean;
   /** Body text mentions a free downloadable resource offered in exchange for contact info. */
   hasLeadMagnet: boolean;
+  /** Body text uses differentiation-claim language (e.g. "unlike", "only", "patented"). */
+  hasDifferentiationLanguage: boolean;
+  /** Body text mentions quantified results (client counts, years in business, stats). */
+  hasProofPoints: boolean;
+  /** Body text names a specific target audience/industry rather than speaking generically. */
+  hasAudienceSpecificity: boolean;
+  /** Body text mentions sustainability/ESG topics — informational only, not expected of every site. */
+  hasEsgSignals: boolean;
+  /** Body text uses human-centered/empathy-driven design language — informational only. */
+  hasHumanCenteredSignals: boolean;
   metaGenerator: string | null;
   metaRobots: string | null;
   contactLinks: string[];
@@ -406,6 +416,11 @@ type DomExtraction = {
   hasCookieBannerMarkup: boolean;
   hasCtaAboveFold: boolean;
   hasLeadMagnet: boolean;
+  hasDifferentiationLanguage: boolean;
+  hasProofPoints: boolean;
+  hasAudienceSpecificity: boolean;
+  hasEsgSignals: boolean;
+  hasHumanCenteredSignals: boolean;
   metaGenerator: string | null;
   metaRobots: string | null;
   assetSrcs: string[];
@@ -512,6 +527,31 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
         bodyText
       );
 
+    // Brand-language pattern checks (all "if present" — absence isn't a failure, just an
+    // observation) for lib/extractors/extractBrandExperience.ts. Each tests the same bodyText
+    // already computed above against a fixed phrase/keyword list — a genuine signal that isn't
+    // phrased this way won't be caught, which is reflected in that extractor's confidence values.
+    const hasDifferentiationLanguage =
+      /\b(unlike|only company|only provider|unique(ly)?|proprietary|exclusiv(e|ely)|first to|patented|industry[\s-]leading|award[\s-]winning)\b/i.test(
+        bodyText
+      );
+    const hasProofPoints =
+      /\d[\d,]*\+?\s*(clients?|customers?|projects?|properties|years?( of experience)?|awards?|5[\s-]?star|reviews?)|\$[\d,]+(\.\d+)?[kmb]?\b|\b\d+%\s*(increase|growth|satisfaction|faster|more)/i.test(
+        bodyText
+      );
+    const hasAudienceSpecificity =
+      /\bfor (small business(es)?|homeowners?|families|professionals|startups|entrepreneurs|contractors|healthcare providers|dentists|lawyers|realtors|restaurants|nonprofits)\b|specializ(e|ing) in|serving [a-z\s]+(since|for)\b|industries? we serve/i.test(
+        bodyText
+      );
+    const hasEsgSignals =
+      /sustainab|carbon neutral|net zero|eco[\s-]?friendly|renewable energy|environmental(ly)? responsib|corporate social responsibility|\bESG\b|fair trade|\bb corp\b|certified b corporation/i.test(
+        bodyText
+      );
+    const hasHumanCenteredSignals =
+      /accessib(le|ility) statement|we listen|your needs|tailored to you|inclusiv|every(one|body) deserves|no matter (who|where)|designed for you|human[\s-]centered|customer[\s-]first/i.test(
+        bodyText
+      );
+
     const headingSequence = [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((el) =>
       Number(el.tagName.slice(1))
     );
@@ -595,6 +635,11 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       hasCookieBannerMarkup,
       hasCtaAboveFold,
       hasLeadMagnet,
+      hasDifferentiationLanguage,
+      hasProofPoints,
+      hasAudienceSpecificity,
+      hasEsgSignals,
+      hasHumanCenteredSignals,
       metaGenerator:
         (document.querySelector('meta[name="generator"]') as any)?.getAttribute("content") ?? null,
       metaRobots:
@@ -788,6 +833,11 @@ async function crawlSinglePage(
     hasCookieBannerMarkup: false,
     hasCtaAboveFold: false,
     hasLeadMagnet: false,
+    hasDifferentiationLanguage: false,
+    hasProofPoints: false,
+    hasAudienceSpecificity: false,
+    hasEsgSignals: false,
+    hasHumanCenteredSignals: false,
     metaGenerator: null,
     metaRobots: null,
     contactLinks: [],
@@ -881,6 +931,11 @@ async function crawlSinglePage(
       hasCookieBannerMarkup: dom.hasCookieBannerMarkup,
       hasCtaAboveFold: dom.hasCtaAboveFold,
       hasLeadMagnet: dom.hasLeadMagnet,
+      hasDifferentiationLanguage: dom.hasDifferentiationLanguage,
+      hasProofPoints: dom.hasProofPoints,
+      hasAudienceSpecificity: dom.hasAudienceSpecificity,
+      hasEsgSignals: dom.hasEsgSignals,
+      hasHumanCenteredSignals: dom.hasHumanCenteredSignals,
       metaGenerator: dom.metaGenerator,
       metaRobots: dom.metaRobots,
       contactLinks: dom.contactLinks,
