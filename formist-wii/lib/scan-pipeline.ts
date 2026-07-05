@@ -55,6 +55,7 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       sitemapFound: crawl.sitemapFound,
       llmsTxtFound: crawl.llmsTxtFound,
       allPages: crawl.pages,
+      wordpressDiagnostics: crawl.wordpressDiagnostics,
     };
 
     const draftEvidence = crawl.pages.flatMap((page) => extractAllEvidenceForPage(scanContext, page));

@@ -88,6 +88,11 @@ export type CrawledPageData = {
   isWordPress: boolean;
   wordpressVersion: string | null;
   wordpressPlugins: string[];
+  wordpressTheme: string | null;
+  hasWpContentPath: boolean;
+  hasWpIncludesPath: boolean;
+  wordpressCachingSignals: string[];
+  wordpressPageBuilderSignals: string[];
   loadTimeMs: number;
   /** Number of redirect hops before reaching finalUrl (0 = no redirect). */
   redirectChainLength: number;
@@ -102,6 +107,22 @@ export type CrawledPageData = {
   footerLinks: string[];
 };
 
+/**
+ * Passive, single-GET diagnostics for WordPress sites. Every field here comes from an
+ * unauthenticated GET to a publicly reachable URL — no forms are submitted, no credentials
+ * are attempted, and no exploitation is performed. `attempted` is false when the homepage
+ * wasn't detected as WordPress, in which case the rest of the fields are left at their
+ * not-checked defaults.
+ */
+export type WordPressDiagnostics = {
+  attempted: boolean;
+  wpJson: { reachable: boolean; status: number | null };
+  restUsersEndpoint: { reachable: boolean; status: number | null; userCount: number | null };
+  xmlrpc: { reachable: boolean; status: number | null };
+  loginPage: { reachable: boolean; status: number | null; looksLikeWpLogin: boolean };
+  latestCoreVersion: string | null;
+};
+
 export type CrawlWebsiteResult = {
   blockedByRobots: boolean;
   robotsFound: boolean;
@@ -109,6 +130,7 @@ export type CrawlWebsiteResult = {
   sitemapFound: boolean;
   llmsTxtFound: boolean;
   pages: CrawledPageData[];
+  wordpressDiagnostics: WordPressDiagnostics | null;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -184,6 +206,68 @@ export async function fetchLlmsTxtPresence(origin: string): Promise<boolean> {
   return Boolean(res && res.status < 400);
 }
 
+const WP_VERSION_CHECK_URL = "https://api.wordpress.org/core/version-check/1.7/";
+
+/**
+ * Passive WordPress diagnostics: each check is a single, unauthenticated GET to a publicly
+ * reachable URL. No forms are submitted (wp-login.php is only ever GET, never POSTed to), no
+ * credentials are attempted, and nothing here exploits or modifies anything. Only called when
+ * the homepage has already been passively fingerprinted as WordPress via public markup.
+ */
+export async function fetchWordPressDiagnostics(origin: string): Promise<WordPressDiagnostics> {
+  const wpJsonRes = await timedFetchText(new URL("/wp-json/", origin).toString());
+  const wpJson = { reachable: Boolean(wpJsonRes && wpJsonRes.status < 400), status: wpJsonRes?.status ?? null };
+
+  await sleep(RATE_LIMIT_DELAY_MS);
+  const usersRes = await timedFetchText(new URL("/wp-json/wp/v2/users", origin).toString());
+  let userCount: number | null = null;
+  if (usersRes && usersRes.status < 400) {
+    try {
+      const parsed = JSON.parse(usersRes.text);
+      if (Array.isArray(parsed)) userCount = parsed.length;
+    } catch {
+      // Not a JSON array (e.g. an HTML error page) — leave userCount null.
+    }
+  }
+  const restUsersEndpoint = {
+    reachable: Boolean(usersRes && usersRes.status < 400),
+    status: usersRes?.status ?? null,
+    userCount,
+  };
+
+  await sleep(RATE_LIMIT_DELAY_MS);
+  const xmlrpcRes = await timedFetchText(new URL("/xmlrpc.php", origin).toString());
+  // xmlrpc.php replies 405 to a plain GET when present (it only accepts POST), so "reachable"
+  // means the endpoint exists, not that it returned a 2xx.
+  const xmlrpc = {
+    reachable: Boolean(xmlrpcRes && (xmlrpcRes.status === 405 || xmlrpcRes.status < 400)),
+    status: xmlrpcRes?.status ?? null,
+  };
+
+  await sleep(RATE_LIMIT_DELAY_MS);
+  // A single GET to load the login page — this only reads the rendered form, it never submits it.
+  const loginRes = await timedFetchText(new URL("/wp-login.php", origin).toString());
+  const loginPage = {
+    reachable: Boolean(loginRes && loginRes.status < 400),
+    status: loginRes?.status ?? null,
+    looksLikeWpLogin: Boolean(loginRes && /id=["']loginform["']|user_login|wp-login/i.test(loginRes.text)),
+  };
+
+  await sleep(RATE_LIMIT_DELAY_MS);
+  const versionRes = await timedFetchText(WP_VERSION_CHECK_URL);
+  let latestCoreVersion: string | null = null;
+  if (versionRes && versionRes.status < 400) {
+    try {
+      const parsed = JSON.parse(versionRes.text) as { offers?: { current?: string }[] };
+      latestCoreVersion = parsed.offers?.[0]?.current ?? null;
+    } catch {
+      latestCoreVersion = null;
+    }
+  }
+
+  return { attempted: true, wpJson, restUsersEndpoint, xmlrpc, loginPage, latestCoreVersion };
+}
+
 function partitionLinks(
   rawLinks: string[],
   origin: string
@@ -255,6 +339,12 @@ type DomExtraction = {
   metaGenerator: string | null;
   metaRobots: string | null;
   assetSrcs: string[];
+  hasGutenbergBlocks: boolean;
+  hasElementorMarkers: boolean;
+  hasDiviMarkers: boolean;
+  hasWpBakeryMarkers: boolean;
+  hasOxygenMarkers: boolean;
+  hasBricksMarkers: boolean;
   footerText: string;
   hasAuthorSignal: boolean;
   hasAddressSignal: boolean;
@@ -380,6 +470,12 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
           return "";
         })
         .filter(Boolean),
+      hasGutenbergBlocks: Boolean(document.querySelector('[class*="wp-block-"]')),
+      hasElementorMarkers: Boolean(document.querySelector('[class*="elementor-"]')),
+      hasDiviMarkers: Boolean(document.querySelector('[class*="et_pb_"]')),
+      hasWpBakeryMarkers: Boolean(document.querySelector('[class*="vc_row"], [class*="wpb_"]')),
+      hasOxygenMarkers: Boolean(document.querySelector('[class*="ct-section"], [class*="ct-div-block"]')),
+      hasBricksMarkers: Boolean(document.querySelector('[class*="brxe-"]')),
       footerText,
       hasAuthorSignal,
       hasAddressSignal,
@@ -403,14 +499,47 @@ function detectAnalyticsTag(scripts: ScriptCapture[]): boolean {
   });
 }
 
+const KNOWN_CACHING_PLUGIN_SLUGS = [
+  "wp-super-cache",
+  "w3-total-cache",
+  "wp-rocket",
+  "wp-fastest-cache",
+  "litespeed-cache",
+  "sg-cachepress",
+  "cache-enabler",
+  "comet-cache",
+  "wp-optimize",
+  "autoptimize",
+];
+
+const CACHING_RESPONSE_HEADER_SIGNALS = [
+  "x-cache",
+  "x-cache-enabled",
+  "x-litespeed-cache",
+  "cf-cache-status",
+  "x-nginx-cache",
+  "x-proxy-cache",
+];
+
 function detectWordPress(
   metaGenerator: string | null,
   assetSrcs: string[]
-): { isWordPress: boolean; version: string | null; plugins: string[] } {
+): {
+  isWordPress: boolean;
+  version: string | null;
+  plugins: string[];
+  theme: string | null;
+  hasWpContentPath: boolean;
+  hasWpIncludesPath: boolean;
+} {
   const version = metaGenerator?.match(/WordPress\s*([\d.]+)/i)?.[1] ?? null;
+  const hasWpContentPath = assetSrcs.some((src) => /\/wp-content\//i.test(src));
+  const hasWpIncludesPath = assetSrcs.some((src) => /\/wp-includes\//i.test(src));
   const isWordPress =
     Boolean(version) ||
-    assetSrcs.some((src) => /\/wp-content\//i.test(src) || /\/wp-json\//i.test(src));
+    hasWpContentPath ||
+    hasWpIncludesPath ||
+    assetSrcs.some((src) => /\/wp-json\//i.test(src));
   const plugins = [
     ...new Set(
       assetSrcs
@@ -418,7 +547,43 @@ function detectWordPress(
         .filter((v): v is string => Boolean(v))
     ),
   ];
-  return { isWordPress, version, plugins };
+  const theme = assetSrcs
+    .map((src) => src.match(/\/wp-content\/themes\/([a-z0-9_-]+)\//i)?.[1])
+    .find((v): v is string => Boolean(v)) ?? null;
+  return { isWordPress, version, plugins, theme, hasWpContentPath, hasWpIncludesPath };
+}
+
+/** Detected purely from public asset paths and known plugin slugs / response headers — no probing. */
+function detectCachingSignals(headers: Record<string, string>, plugins: string[]): string[] {
+  const signals = new Set<string>();
+  for (const plugin of plugins) {
+    if (KNOWN_CACHING_PLUGIN_SLUGS.includes(plugin)) signals.add(plugin);
+  }
+  const lowerHeaders = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v])
+  );
+  for (const headerName of CACHING_RESPONSE_HEADER_SIGNALS) {
+    if (lowerHeaders[headerName] !== undefined) signals.add(`header:${headerName}`);
+  }
+  return [...signals];
+}
+
+function detectPageBuilderSignals(dom: {
+  hasGutenbergBlocks: boolean;
+  hasElementorMarkers: boolean;
+  hasDiviMarkers: boolean;
+  hasWpBakeryMarkers: boolean;
+  hasOxygenMarkers: boolean;
+  hasBricksMarkers: boolean;
+}): string[] {
+  const signals: string[] = [];
+  if (dom.hasElementorMarkers) signals.push("elementor");
+  if (dom.hasDiviMarkers) signals.push("divi");
+  if (dom.hasWpBakeryMarkers) signals.push("wpbakery");
+  if (dom.hasOxygenMarkers) signals.push("oxygen");
+  if (dom.hasBricksMarkers) signals.push("bricks");
+  if (dom.hasGutenbergBlocks) signals.push("gutenberg");
+  return signals;
 }
 
 async function crawlSinglePage(
@@ -455,6 +620,11 @@ async function crawlSinglePage(
     isWordPress: false,
     wordpressVersion: null,
     wordpressPlugins: [],
+    wordpressTheme: null,
+    hasWpContentPath: false,
+    hasWpIncludesPath: false,
+    wordpressCachingSignals: [],
+    wordpressPageBuilderSignals: [],
     loadTimeMs: 0,
     redirectChainLength: 0,
     footerText: "",
@@ -532,6 +702,11 @@ async function crawlSinglePage(
       isWordPress: wp.isWordPress,
       wordpressVersion: wp.version,
       wordpressPlugins: wp.plugins,
+      wordpressTheme: wp.theme,
+      hasWpContentPath: wp.hasWpContentPath,
+      hasWpIncludesPath: wp.hasWpIncludesPath,
+      wordpressCachingSignals: detectCachingSignals(headers, wp.plugins),
+      wordpressPageBuilderSignals: detectPageBuilderSignals(dom),
       loadTimeMs,
       redirectChainLength,
       footerText: dom.footerText,
@@ -630,6 +805,7 @@ export async function crawlWebsite({
       sitemapFound: false,
       llmsTxtFound: false,
       pages: [],
+      wordpressDiagnostics: null,
     };
   }
   const sitemapUrls = await fetchSitemapUrls(origin);
@@ -684,6 +860,11 @@ export async function crawlWebsite({
     await browser.close();
   }
 
+  const homepage = pages.find((p) => p.requestedUrl === normalizedRoot) ?? pages[0];
+  const wordpressDiagnostics = homepage?.isWordPress
+    ? await fetchWordPressDiagnostics(origin)
+    : null;
+
   return {
     blockedByRobots: false,
     robotsFound: robots.fetched,
@@ -691,5 +872,6 @@ export async function crawlWebsite({
     sitemapFound: sitemapUrls.length > 0,
     llmsTxtFound,
     pages,
+    wordpressDiagnostics,
   };
 }

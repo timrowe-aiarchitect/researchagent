@@ -1,4 +1,4 @@
-import type { CrawledPageData } from "@/lib/crawler-service";
+import type { CrawledPageData, WordPressDiagnostics } from "@/lib/crawler-service";
 import type { EvidenceCategory, Severity } from "@/generated/prisma/enums";
 
 /**
@@ -29,6 +29,8 @@ export type ScanContext = {
   llmsTxtFound: boolean;
   /** All pages crawled in this scan — needed for cross-page checks like title uniqueness. */
   allPages: CrawledPageData[];
+  /** Passive WordPress diagnostic fetches — null when the homepage wasn't detected as WordPress. */
+  wordpressDiagnostics: WordPressDiagnostics | null;
 };
 
 export type EvidenceExtractor = (scan: ScanContext, page: CrawledPageData) => NormalizedEvidence[];
