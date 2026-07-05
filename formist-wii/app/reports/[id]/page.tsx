@@ -111,28 +111,23 @@ export default async function ReportPage({
         </Card>
       </div>
 
-      {/* Qualitative assessment — additive AI-generated narrative, entirely separate from the
-          deterministic category scores below (it never feeds into them). Omitted when it wasn't
-          generated (e.g. no API key configured for this deployment). */}
+      {/* Qualitative assessment — an additive AI strategist read, entirely separate from the
+          deterministic category scores below. Its per-dimension "score" is the model's own
+          qualitative point estimate for comparison only; it is never summed into overallScore or
+          written to a CategoryScore row. Omitted when it wasn't generated (e.g. no API key
+          configured for this deployment). */}
       {report.qualitativeAssessment && (
         <div className="mt-8">
           <h2 className="text-lg font-semibold tracking-tight">Qualitative assessment</h2>
           <p className="text-muted-foreground text-sm">
-            An AI-generated strategist read of brand clarity, UX, conversion effectiveness, trust, and AI
-            discoverability — a narrative complement to the evidence-based scores below, not a factor in them.
+            An AI strategist&apos;s advisory read of brand experience, UX/conversion, and AI discoverability —
+            a qualitative complement to the evidence-based scores above, not a factor in them.
           </p>
-          <Card className="mt-4">
-            <CardContent className="pb-6 pt-6 text-sm leading-relaxed">
-              {report.qualitativeAssessment.overallNarrative}
-            </CardContent>
-          </Card>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {(
               [
-                ["Brand clarity", report.qualitativeAssessment.brandClarity],
-                ["UX", report.qualitativeAssessment.ux],
-                ["Conversion effectiveness", report.qualitativeAssessment.conversionEffectiveness],
-                ["Trust", report.qualitativeAssessment.trust],
+                ["Brand experience", report.qualitativeAssessment.brandExperience],
+                ["UX & conversion", report.qualitativeAssessment.uxConversion],
                 ["AI discoverability", report.qualitativeAssessment.aiDiscoverability],
               ] as const
             ).map(([label, dimension]) => (
@@ -140,28 +135,36 @@ export default async function ReportPage({
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-base">
                     <span>{label}</span>
-                    <Badge variant="secondary">{Math.round(dimension.confidence * 100)}% confidence</Badge>
+                    <span className="text-muted-foreground text-sm font-normal">
+                      {dimension.score}/{dimension.maxScore}
+                    </span>
                   </CardTitle>
-                  <CardDescription>{dimension.assessment}</CardDescription>
+                  <Progress value={(dimension.score / dimension.maxScore) * 100} className="mt-1" />
+                  <CardDescription className="flex items-center justify-between gap-2">
+                    <span>{dimension.rationale}</span>
+                    <Badge variant="secondary" className="shrink-0">
+                      {dimension.confidence} confidence
+                    </Badge>
+                  </CardDescription>
                 </CardHeader>
-                {(dimension.strengths.length > 0 || dimension.concerns.length > 0) && (
+                {(dimension.evidence.length > 0 || dimension.recommendations.length > 0) && (
                   <CardContent className="flex flex-col gap-3 pb-6 text-sm">
-                    {dimension.strengths.length > 0 && (
+                    {dimension.evidence.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Strengths</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Evidence cited</p>
                         <ul className="mt-1 list-disc space-y-1 pl-5">
-                          {dimension.strengths.map((s, i) => (
-                            <li key={i}>{s}</li>
+                          {dimension.evidence.map((e, i) => (
+                            <li key={i}>{e}</li>
                           ))}
                         </ul>
                       </div>
                     )}
-                    {dimension.concerns.length > 0 && (
+                    {dimension.recommendations.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Concerns</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Recommendations</p>
                         <ul className="mt-1 list-disc space-y-1 pl-5">
-                          {dimension.concerns.map((s, i) => (
-                            <li key={i}>{s}</li>
+                          {dimension.recommendations.map((r, i) => (
+                            <li key={i}>{r}</li>
                           ))}
                         </ul>
                       </div>

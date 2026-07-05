@@ -111,7 +111,8 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       rootUrl,
       scan.pagesRequested,
       crawl.pages,
-      evidenceWithRecommendation
+      evidenceWithRecommendation,
+      { name: scan.client.name, industry: scan.client.industry, conversionGoal: scan.client.conversionGoal }
     );
   } catch (error) {
     await prisma.scan.update({
@@ -142,7 +143,8 @@ async function scoreAndFinalize(
     h1: string | null;
     wordCount: number;
   }[],
-  evidenceItems: EvidenceWithRecommendation[]
+  evidenceItems: EvidenceWithRecommendation[],
+  clientContext: { name: string | null; industry: string | null; conversionGoal: string | null }
 ): Promise<void> {
   const scoring = computeScanScore({
     evidence: evidenceItems.map((e) => ({
@@ -176,7 +178,9 @@ async function scoreAndFinalize(
   // any score above. Gracefully resolves to null (no API key, network failure, bad response) so
   // it can never fail or alter the scan.
   const qualitativeAssessment = await generateQualitativeAssessment({
-    rootUrl,
+    clientName: clientContext.name,
+    industry: clientContext.industry,
+    conversionGoal: clientContext.conversionGoal,
     pages: pages
       .filter((p) => p.crawlStatus === "success" || p.crawlStatus === "redirect")
       .map((p) => ({

@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label";
 export function NewScanForm() {
   const router = useRouter();
   const [url, setUrl] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [conversionGoal, setConversionGoal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +26,12 @@ export function NewScanForm() {
       const createRes = await fetch("/api/scans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({
+          url,
+          clientName: clientName || undefined,
+          industry: industry || undefined,
+          conversionGoal: conversionGoal || undefined,
+        }),
       });
       const created = await createRes.json();
       if (!createRes.ok) {
@@ -55,6 +63,44 @@ export function NewScanForm() {
           disabled={submitting}
         />
       </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="clientName">Client name (optional)</Label>
+        <Input
+          id="clientName"
+          placeholder="Acme Roofing"
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          disabled={submitting}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="industry">Industry (optional)</Label>
+        <Input
+          id="industry"
+          placeholder="Residential roofing"
+          value={industry}
+          onChange={(e) => setIndustry(e.target.value)}
+          disabled={submitting}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="conversionGoal">Primary conversion goal (optional)</Label>
+        <Input
+          id="conversionGoal"
+          placeholder="Book a free roof inspection"
+          value={conversionGoal}
+          onChange={(e) => setConversionGoal(e.target.value)}
+          disabled={submitting}
+        />
+      </div>
+
+      <p className="text-muted-foreground text-xs">
+        These three are optional and only used as context for the AI qualitative assessment
+        section of the report — the deterministic scan and scoring run the same either way.
+      </p>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 

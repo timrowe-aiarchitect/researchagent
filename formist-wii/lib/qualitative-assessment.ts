@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import { CATEGORY_MAX_POINTS } from "@/lib/scoring";
 import type { EvidenceCategory, Severity } from "@/generated/prisma/enums";
 
 const QUALITATIVE_ASSESSMENT_MODEL = "claude-sonnet-5";
@@ -7,7 +8,7 @@ const QUALITATIVE_ASSESSMENT_TIMEOUT_MS = 60000;
 const QUALITATIVE_ASSESSMENT_MAX_TOKENS = 2048;
 // Worst-severity-first cap so prompt size stays bounded regardless of how many pages were
 // crawled, while keeping the most consequential findings in scope.
-const MAX_EVIDENCE_ITEMS_FOR_PROMPT = 120;
+const MAX_EVIDENCE_ITEMS_PER_BUCKET = 40;
 const MAX_PAGES_FOR_PROMPT = 10;
 
 /**
@@ -22,39 +23,42 @@ Your job is to assess qualitative website strength across brand clarity, UX, con
 
 Return JSON only.`;
 
-// Evidence categories that most directly inform the five assessed dimensions. accessibility and
-// security are included as supporting UX/trust signals even though they're not literal dimension
-// names, since e.g. "trust" has no dedicated evidence category of its own.
-const RELEVANT_CATEGORIES: EvidenceCategory[] = [
-  "brand_experience",
-  "conversion",
-  "ai_discoverability",
+// technical_seo/on_page_seo/performance/accessibility/security/analytics/wordpress_maintainability
+// all feed "technicalEvidence" as supporting context — they aren't one of the three qualitatively
+// scored dimensions below, but they inform judgment about them (e.g. slow pages hurt UX).
+const TECHNICAL_SUPPORTING_CATEGORIES: EvidenceCategory[] = [
+  "technical_seo",
+  "on_page_seo",
+  "performance",
   "accessibility",
   "security",
+  "analytics",
+  "wordpress_maintainability",
 ];
 
 const SEVERITY_RANK: Record<Severity, number> = { info: 0, minor: 1, moderate: 2, major: 3, critical: 4 };
 
 const AssessmentDimensionSchema = z.object({
-  assessment: z.string().min(1),
-  strengths: z.array(z.string()),
-  concerns: z.array(z.string()),
-  confidence: z.number().min(0).max(1),
+  score: z.number(),
+  maxScore: z.number(),
+  rationale: z.string().min(1),
+  evidence: z.array(z.string()),
+  recommendations: z.array(z.string()),
+  confidence: z.enum(["Low", "Medium", "High"]),
 });
 
 const QualitativeAssessmentSchema = z.object({
-  brandClarity: AssessmentDimensionSchema,
-  ux: AssessmentDimensionSchema,
-  conversionEffectiveness: AssessmentDimensionSchema,
-  trust: AssessmentDimensionSchema,
+  brandExperience: AssessmentDimensionSchema,
+  uxConversion: AssessmentDimensionSchema,
   aiDiscoverability: AssessmentDimensionSchema,
-  overallNarrative: z.string().min(1),
 });
 
 export type QualitativeAssessment = z.infer<typeof QualitativeAssessmentSchema>;
 
 export type QualitativeAssessmentInput = {
-  rootUrl: string;
+  clientName: string | null;
+  industry: string | null;
+  conversionGoal: string | null;
   pages: {
     url: string;
     title: string | null;
@@ -72,32 +76,89 @@ export type QualitativeAssessmentInput = {
   }[];
 };
 
-function summarizeEvidenceForPrompt(
-  evidence: QualitativeAssessmentInput["evidence"]
-): QualitativeAssessmentInput["evidence"] {
-  return evidence
-    .filter((e) => RELEVANT_CATEGORIES.includes(e.category))
+type EvidenceForPrompt = QualitativeAssessmentInput["evidence"][number];
+
+function capBySeverity(evidence: EvidenceForPrompt[]): EvidenceForPrompt[] {
+  return [...evidence]
     .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
-    .slice(0, MAX_EVIDENCE_ITEMS_FOR_PROMPT);
+    .slice(0, MAX_EVIDENCE_ITEMS_PER_BUCKET);
+}
+
+function formatEvidenceBlock(evidence: EvidenceForPrompt[]): string {
+  if (evidence.length === 0) return "[]";
+  return JSON.stringify(evidence);
 }
 
 function buildUserMessage(input: QualitativeAssessmentInput): string {
-  const payload = {
-    instructions:
-      "Assess this website using ONLY the crawl evidence and page metadata below — do not infer or assume " +
-      "anything beyond it. Respond with a single JSON object and nothing else (no markdown code fences, no " +
-      "commentary outside the JSON) matching exactly this shape: " +
-      '{"brandClarity":{"assessment":string,"strengths":string[],"concerns":string[],"confidence":number 0-1},' +
-      '"ux":{same shape},"conversionEffectiveness":{same shape},"trust":{same shape},' +
-      '"aiDiscoverability":{same shape},"overallNarrative":string}. ' +
-      "Every strength and concern must cite a specific finding from the evidence below (reference the finding's " +
-      "content, not the raw \"source\" key). If evidence for a dimension is sparse or absent, say so plainly in " +
-      "that dimension's assessment text and lower its confidence accordingly rather than speculating.",
-    rootUrl: input.rootUrl,
-    pages: input.pages.slice(0, MAX_PAGES_FOR_PROMPT),
-    evidence: summarizeEvidenceForPrompt(input.evidence),
-  };
-  return JSON.stringify(payload);
+  const pageEvidence = input.pages.slice(0, MAX_PAGES_FOR_PROMPT);
+  const conversionEvidence = capBySeverity(input.evidence.filter((e) => e.category === "conversion"));
+  const brandEvidence = capBySeverity(input.evidence.filter((e) => e.category === "brand_experience"));
+  const aiEvidence = capBySeverity(input.evidence.filter((e) => e.category === "ai_discoverability"));
+  const technicalEvidence = capBySeverity(
+    input.evidence.filter((e) => TECHNICAL_SUPPORTING_CATEGORIES.includes(e.category))
+  );
+
+  return `Evaluate this website evidence.
+
+Client:
+${input.clientName ?? "Not specified"}
+
+Industry:
+${input.industry ?? "Not specified"}
+
+Primary conversion goal:
+${input.conversionGoal ?? "Not specified"}
+
+Crawled page evidence:
+${JSON.stringify(pageEvidence)}
+
+Technical evidence:
+${formatEvidenceBlock(technicalEvidence)}
+
+Conversion evidence:
+${formatEvidenceBlock(conversionEvidence)}
+
+Brand evidence:
+${formatEvidenceBlock(brandEvidence)}
+
+AI discoverability evidence:
+${formatEvidenceBlock(aiEvidence)}
+
+Return JSON in this exact structure:
+
+{
+  "brandExperience": {
+    "score": 0,
+    "maxScore": ${CATEGORY_MAX_POINTS.brand_experience},
+    "rationale": "",
+    "evidence": [],
+    "recommendations": [],
+    "confidence": "Low|Medium|High"
+  },
+  "uxConversion": {
+    "score": 0,
+    "maxScore": ${CATEGORY_MAX_POINTS.conversion},
+    "rationale": "",
+    "evidence": [],
+    "recommendations": [],
+    "confidence": "Low|Medium|High"
+  },
+  "aiDiscoverability": {
+    "score": 0,
+    "maxScore": ${CATEGORY_MAX_POINTS.ai_discoverability},
+    "rationale": "",
+    "evidence": [],
+    "recommendations": [],
+    "confidence": "Low|Medium|High"
+  }
+}
+
+Scoring rules:
+- Be conservative.
+- Use only supplied evidence.
+- If evidence is incomplete, lower confidence.
+- Do not mention tools.
+- Write in a professional consulting tone.`;
 }
 
 function extractJsonText(text: string): string {
@@ -107,11 +168,29 @@ function extractJsonText(text: string): string {
 }
 
 /**
- * Generates the qualitative narrative layer via the Claude API. Purely additive: the result (or
- * null) is only ever stored on Report.qualitativeAssessment and is never read by lib/scoring.ts —
- * it cannot influence any deterministic score. Never throws: a missing API key, network failure,
- * timeout, or a response that doesn't parse/validate as the expected shape all degrade to `null`
- * so a scan can never fail because of this optional enrichment step.
+ * Locks each dimension's maxScore to the canonical scoring-engine constant (never whatever the
+ * model echoed back) and clamps score into [0, maxScore] — the model's own arithmetic is treated
+ * as advisory text, not a source of truth for the point scale.
+ */
+function normalizeDimension(
+  dimension: z.infer<typeof AssessmentDimensionSchema>,
+  canonicalMaxScore: number
+): z.infer<typeof AssessmentDimensionSchema> {
+  return {
+    ...dimension,
+    maxScore: canonicalMaxScore,
+    score: Math.max(0, Math.min(canonicalMaxScore, dimension.score)),
+  };
+}
+
+/**
+ * Generates the qualitative narrative + advisory scoring layer via the Claude API. Purely
+ * additive: the result (or null) is only ever stored on Report.qualitativeAssessment and is
+ * never read by lib/scoring.ts — its "score" fields are the model's own qualitative point
+ * estimate and can never influence or be confused with a deterministic CategoryScore. Never
+ * throws: a missing API key, network failure, timeout, or a response that doesn't parse/validate
+ * as the expected shape all degrade to `null` so a scan can never fail because of this optional
+ * enrichment step.
  */
 export async function generateQualitativeAssessment(
   input: QualitativeAssessmentInput
@@ -154,7 +233,14 @@ export async function generateQualitativeAssessment(
       return null;
     }
 
-    return result.data;
+    return {
+      brandExperience: normalizeDimension(result.data.brandExperience, CATEGORY_MAX_POINTS.brand_experience),
+      uxConversion: normalizeDimension(result.data.uxConversion, CATEGORY_MAX_POINTS.conversion),
+      aiDiscoverability: normalizeDimension(
+        result.data.aiDiscoverability,
+        CATEGORY_MAX_POINTS.ai_discoverability
+      ),
+    };
   } catch (err) {
     console.warn(
       "[qualitative-assessment] Failed to generate — skipping.",

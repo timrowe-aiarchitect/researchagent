@@ -57,6 +57,11 @@ export const createScanSchema = z.object({
         "URL must be a public http(s) address (no localhost or private network hosts)",
     }),
   requestedBy: z.string().trim().min(1).max(200).default("internal"),
+  // All optional — never required to run a scan. Used only as context for the LLM qualitative
+  // assessment (lib/qualitative-assessment.ts); the deterministic crawl/scoring pipeline ignores them.
+  clientName: z.string().trim().min(1).max(200).optional(),
+  industry: z.string().trim().min(1).max(200).optional(),
+  conversionGoal: z.string().trim().min(1).max(200).optional(),
 });
 
 export type CreateScanInput = z.infer<typeof createScanSchema>;

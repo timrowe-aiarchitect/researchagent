@@ -23,10 +23,18 @@ export async function POST(request: Request) {
 
   const rootUrl = rootUrlFromInput(input.url);
 
+  // Only fill these in if the caller actually supplied them — never blank out a previously-set
+  // name/industry/goal on a repeat scan of the same client just because a later request omitted them.
+  const clientAttributes = {
+    ...(input.clientName ? { name: input.clientName } : {}),
+    ...(input.industry ? { industry: input.industry } : {}),
+    ...(input.conversionGoal ? { conversionGoal: input.conversionGoal } : {}),
+  };
+
   const client = await prisma.client.upsert({
     where: { rootUrl },
-    update: {},
-    create: { rootUrl },
+    update: clientAttributes,
+    create: { rootUrl, ...clientAttributes },
   });
 
   const scan = await prisma.scan.create({

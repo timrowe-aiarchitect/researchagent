@@ -61,11 +61,16 @@ enum CategoryStatus {
 }
 
 model Client {
-  id          String      @id @default(cuid())
-  name        String?
-  rootUrl     String      @unique @map("root_url")
-  detectedCms DetectedCms @default(unknown) @map("detected_cms")
-  createdAt   DateTime    @default(now()) @map("created_at")
+  id             String      @id @default(cuid())
+  name           String?
+  /// Free-text industry/vertical, supplied at scan-request time — used as context for the LLM
+  /// qualitative assessment (lib/qualitative-assessment.ts). Optional; never required to scan.
+  industry       String?
+  /// Free-text primary conversion goal (e.g. "book a consultation"), same purpose as industry.
+  conversionGoal String?     @map("conversion_goal")
+  rootUrl        String      @unique @map("root_url")
+  detectedCms    DetectedCms @default(unknown) @map("detected_cms")
+  createdAt      DateTime    @default(now()) @map("created_at")
 
   scans Scan[]
 

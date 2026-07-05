@@ -1,26 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateQualitativeAssessment } from "@/lib/qualitative-assessment";
+import { CATEGORY_MAX_POINTS } from "@/lib/scoring";
 
 const ORIGINAL_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-const VALID_DIMENSION = {
-  assessment: "Reasonably clear.",
-  strengths: ["States a specific value proposition in the H1."],
-  concerns: ["No supporting proof points were found."],
-  confidence: 0.7,
-};
+function dimension(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    score: 7,
+    maxScore: 10,
+    rationale: "Reasonably clear positioning, thin on supporting proof.",
+    evidence: ["Positioning clarity could not be confirmed (brand_experience evidence)."],
+    recommendations: ["Add quantified proof points to strengthen credibility."],
+    confidence: "Medium",
+    ...overrides,
+  };
+}
 
 const VALID_ASSESSMENT = {
-  brandClarity: VALID_DIMENSION,
-  ux: VALID_DIMENSION,
-  conversionEffectiveness: VALID_DIMENSION,
-  trust: VALID_DIMENSION,
-  aiDiscoverability: VALID_DIMENSION,
-  overallNarrative: "Overall, a reasonably clear but thin site.",
+  brandExperience: dimension({ maxScore: CATEGORY_MAX_POINTS.brand_experience }),
+  uxConversion: dimension({ maxScore: CATEGORY_MAX_POINTS.conversion }),
+  aiDiscoverability: dimension({ maxScore: CATEGORY_MAX_POINTS.ai_discoverability }),
 };
 
 const SAMPLE_INPUT = {
-  rootUrl: "https://example.com/",
+  clientName: "Acme Roofing",
+  industry: "Residential roofing",
+  conversionGoal: "Book a free roof inspection",
   pages: [
     {
       url: "https://example.com/",
@@ -97,6 +102,36 @@ describe("generateQualitativeAssessment", () => {
     expect(result).toEqual(VALID_ASSESSMENT);
   });
 
+  it("overrides maxScore with the canonical scoring-engine constant regardless of what the model returned", async () => {
+    const wrongMaxScores = {
+      brandExperience: dimension({ maxScore: 999 }),
+      uxConversion: dimension({ maxScore: 1 }),
+      aiDiscoverability: dimension({ maxScore: 50 }),
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => anthropicApiResponse(JSON.stringify(wrongMaxScores))));
+
+    const result = await generateQualitativeAssessment(SAMPLE_INPUT);
+
+    expect(result?.brandExperience.maxScore).toBe(CATEGORY_MAX_POINTS.brand_experience);
+    expect(result?.uxConversion.maxScore).toBe(CATEGORY_MAX_POINTS.conversion);
+    expect(result?.aiDiscoverability.maxScore).toBe(CATEGORY_MAX_POINTS.ai_discoverability);
+  });
+
+  it("clamps an out-of-range score into [0, maxScore]", async () => {
+    const outOfRange = {
+      brandExperience: dimension({ score: 999 }),
+      uxConversion: dimension({ score: -5 }),
+      aiDiscoverability: dimension({ score: 13 }),
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => anthropicApiResponse(JSON.stringify(outOfRange))));
+
+    const result = await generateQualitativeAssessment(SAMPLE_INPUT);
+
+    expect(result?.brandExperience.score).toBe(CATEGORY_MAX_POINTS.brand_experience);
+    expect(result?.uxConversion.score).toBe(0);
+    expect(result?.aiDiscoverability.score).toBe(13);
+  });
+
   it("returns null when the response isn't valid JSON", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => anthropicApiResponse("not json at all")));
 
@@ -106,8 +141,21 @@ describe("generateQualitativeAssessment", () => {
   });
 
   it("returns null when the response is valid JSON but fails schema validation", async () => {
-    const incomplete = { brandClarity: VALID_DIMENSION }; // missing every other required key
+    const incomplete = { brandExperience: dimension() }; // missing uxConversion / aiDiscoverability
     vi.stubGlobal("fetch", vi.fn(async () => anthropicApiResponse(JSON.stringify(incomplete))));
+
+    const result = await generateQualitativeAssessment(SAMPLE_INPUT);
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when confidence isn't one of Low/Medium/High", async () => {
+    const badConfidence = {
+      brandExperience: dimension({ confidence: 0.7 }),
+      uxConversion: dimension(),
+      aiDiscoverability: dimension(),
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => anthropicApiResponse(JSON.stringify(badConfidence))));
 
     const result = await generateQualitativeAssessment(SAMPLE_INPUT);
 
