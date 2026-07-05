@@ -91,6 +91,12 @@ export type CrawledPageData = {
   loadTimeMs: number;
   /** Number of redirect hops before reaching finalUrl (0 = no redirect). */
   redirectChainLength: number;
+  footerText: string;
+  hasAuthorSignal: boolean;
+  hasAddressSignal: boolean;
+  hasTrustKeywords: boolean;
+  hasFaqPattern: boolean;
+  hasShortLeadParagraph: boolean;
   // Consumed only by the crawl-queue prioritization in crawlWebsite(), not persisted.
   navLinks: string[];
   footerLinks: string[];
@@ -99,7 +105,9 @@ export type CrawledPageData = {
 export type CrawlWebsiteResult = {
   blockedByRobots: boolean;
   robotsFound: boolean;
+  robotsTxtContent: string | null;
   sitemapFound: boolean;
+  llmsTxtFound: boolean;
   pages: CrawledPageData[];
 };
 
@@ -168,6 +176,12 @@ export async function fetchSitemapUrls(origin: string): Promise<string[]> {
   const res = await timedFetchText(new URL("/sitemap.xml", origin).toString());
   if (!res || res.status >= 400) return [];
   return parseSitemapUrls(res.text, origin);
+}
+
+/** Presence check only — llms.txt is an emerging, unstandardized convention. */
+export async function fetchLlmsTxtPresence(origin: string): Promise<boolean> {
+  const res = await timedFetchText(new URL("/llms.txt", origin).toString());
+  return Boolean(res && res.status < 400);
 }
 
 function partitionLinks(
@@ -241,6 +255,12 @@ type DomExtraction = {
   metaGenerator: string | null;
   metaRobots: string | null;
   assetSrcs: string[];
+  footerText: string;
+  hasAuthorSignal: boolean;
+  hasAddressSignal: boolean;
+  hasTrustKeywords: boolean;
+  hasFaqPattern: boolean;
+  hasShortLeadParagraph: boolean;
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- runs inside the browser page, not this module's TS scope */
@@ -258,6 +278,45 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       const prop = m.getAttribute("property");
       if (prop) openGraph[prop] = m.getAttribute("content");
     });
+
+    const jsonLd = [...document.querySelectorAll('script[type="application/ld+json"]')]
+      .map((s) => {
+        try {
+          return JSON.parse(s.textContent || "");
+        } catch {
+          return null;
+        }
+      })
+      .filter((v) => v !== null);
+    const jsonLdText = JSON.stringify(jsonLd);
+
+    const footerText = [...document.querySelectorAll("footer")]
+      .map((f) => (f as any).innerText || "")
+      .join(" ")
+      .trim()
+      .slice(0, 1000);
+
+    const hasAuthorSignal =
+      Boolean(document.querySelector('[rel="author"], [itemprop="author"], .author, [class*="byline"]')) ||
+      /"@type"\s*:\s*"person"/i.test(jsonLdText) ||
+      /"author"\s*:/i.test(jsonLdText);
+
+    const hasAddressSignal =
+      Boolean(document.querySelector("address")) || /"@type"\s*:\s*"postaladdress"/i.test(jsonLdText);
+
+    const hasTrustKeywords =
+      /certified|accredited|award|since (19|20)\d{2}|years? of experience|testimonial|verified|licensed|insured|bbb accredited/i.test(
+        bodyText
+      );
+
+    const questionHeadings = [...document.querySelectorAll("h2, h3, h4, dt, summary")].filter((el) =>
+      (el.textContent || "").trim().endsWith("?")
+    );
+    const hasFaqPattern = questionHeadings.length >= 2 || document.querySelectorAll("details").length >= 1;
+
+    const firstParagraph = document.querySelector("p");
+    const firstParagraphText = firstParagraph ? (firstParagraph.textContent || "").trim() : "";
+    const hasShortLeadParagraph = firstParagraphText.length >= 40 && firstParagraphText.length <= 300;
 
     return {
       title: document.title || null,
@@ -286,15 +345,7 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
       ]
         .map((el) => ((el.textContent || (el as HTMLInputElement).value || "").trim()))
         .filter(Boolean),
-      jsonLd: [...document.querySelectorAll('script[type="application/ld+json"]')]
-        .map((s) => {
-          try {
-            return JSON.parse(s.textContent || "");
-          } catch {
-            return null;
-          }
-        })
-        .filter((v) => v !== null),
+      jsonLd,
       openGraph,
       scripts: [...document.querySelectorAll("script")].map((s) => {
         const src = (s as HTMLScriptElement).src || null;
@@ -329,6 +380,12 @@ async function extractDomData(page: PlaywrightPage): Promise<DomExtraction> {
           return "";
         })
         .filter(Boolean),
+      footerText,
+      hasAuthorSignal,
+      hasAddressSignal,
+      hasTrustKeywords,
+      hasFaqPattern,
+      hasShortLeadParagraph,
     };
   });
 }
@@ -400,6 +457,12 @@ async function crawlSinglePage(
     wordpressPlugins: [],
     loadTimeMs: 0,
     redirectChainLength: 0,
+    footerText: "",
+    hasAuthorSignal: false,
+    hasAddressSignal: false,
+    hasTrustKeywords: false,
+    hasFaqPattern: false,
+    hasShortLeadParagraph: false,
     navLinks: [],
     footerLinks: [],
   };
@@ -424,6 +487,11 @@ async function crawlSinglePage(
 
     const dom = await extractDomData(page);
     const { internalLinks, externalLinks } = partitionLinks(dom.allLinks, origin);
+    // Nav/footer links feed the crawl queue directly, so they need the same http(s)+same-origin
+    // filtering as internalLinks — otherwise tel:/mailto: links (common in footers) get queued
+    // as crawl candidates and Playwright fails trying to "navigate" to them.
+    const navLinks = partitionLinks(dom.navLinks, origin).internalLinks;
+    const footerLinks = partitionLinks(dom.footerLinks, origin).internalLinks;
     const screenshotPath = await captureScreenshot(page, scanId, url);
     const wp = detectWordPress(dom.metaGenerator, dom.assetSrcs);
 
@@ -466,8 +534,14 @@ async function crawlSinglePage(
       wordpressPlugins: wp.plugins,
       loadTimeMs,
       redirectChainLength,
-      navLinks: dom.navLinks,
-      footerLinks: dom.footerLinks,
+      footerText: dom.footerText,
+      hasAuthorSignal: dom.hasAuthorSignal,
+      hasAddressSignal: dom.hasAddressSignal,
+      hasTrustKeywords: dom.hasTrustKeywords,
+      hasFaqPattern: dom.hasFaqPattern,
+      hasShortLeadParagraph: dom.hasShortLeadParagraph,
+      navLinks,
+      footerLinks,
     };
   } catch (err) {
     const isTimeout = err instanceof Error && /timeout/i.test(err.message);
@@ -549,9 +623,17 @@ export async function crawlWebsite({
 
   const robots = await fetchRobots(origin);
   if (robots.disallowsAll) {
-    return { blockedByRobots: true, robotsFound: robots.fetched, sitemapFound: false, pages: [] };
+    return {
+      blockedByRobots: true,
+      robotsFound: robots.fetched,
+      robotsTxtContent: robots.raw,
+      sitemapFound: false,
+      llmsTxtFound: false,
+      pages: [],
+    };
   }
   const sitemapUrls = await fetchSitemapUrls(origin);
+  const llmsTxtFound = await fetchLlmsTxtPresence(origin);
 
   const visited = new Set<string>();
   const candidates = new Map<string, Tier>();
@@ -605,7 +687,9 @@ export async function crawlWebsite({
   return {
     blockedByRobots: false,
     robotsFound: robots.fetched,
+    robotsTxtContent: robots.raw,
     sitemapFound: sitemapUrls.length > 0,
+    llmsTxtFound,
     pages,
   };
 }

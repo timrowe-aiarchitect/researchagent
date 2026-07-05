@@ -51,7 +51,9 @@ export async function runScanPipeline(scanId: string): Promise<void> {
       rootUrl,
       homepageUrl: rootUrl,
       robotsFound: crawl.robotsFound,
+      robotsTxtContent: crawl.robotsTxtContent,
       sitemapFound: crawl.sitemapFound,
+      llmsTxtFound: crawl.llmsTxtFound,
       allPages: crawl.pages,
     };
 

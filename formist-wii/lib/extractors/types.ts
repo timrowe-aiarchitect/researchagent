@@ -24,7 +24,9 @@ export type ScanContext = {
   rootUrl: string;
   homepageUrl: string;
   robotsFound: boolean;
+  robotsTxtContent: string | null;
   sitemapFound: boolean;
+  llmsTxtFound: boolean;
   /** All pages crawled in this scan — needed for cross-page checks like title uniqueness. */
   allPages: CrawledPageData[];
 };
