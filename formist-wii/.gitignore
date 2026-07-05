@@ -42,3 +42,7 @@ yarn-error.log*
 next-env.d.ts
 
 /generated/prisma
+
+# The repo-root .gitignore (shared with the unrelated Python service in this monorepo) has a
+# bare `lib/` rule intended for Python build output. Un-ignore this app's own lib/ directory.
+!/lib/

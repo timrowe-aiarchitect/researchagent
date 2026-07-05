@@ -23,15 +23,15 @@ export async function POST(request: Request) {
 
   const rootUrl = rootUrlFromInput(input.url);
 
-  const website = await prisma.website.upsert({
+  const client = await prisma.client.upsert({
     where: { rootUrl },
     update: {},
     create: { rootUrl },
   });
 
-  const run = await prisma.run.create({
+  const scan = await prisma.scan.create({
     data: {
-      websiteId: website.id,
+      clientId: client.id,
       requestedBy: input.requestedBy,
       status: "queued",
       pagesRequested: 25,
@@ -40,12 +40,12 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      id: run.id,
-      websiteId: website.id,
-      rootUrl: website.rootUrl,
-      status: run.status,
-      pagesRequested: run.pagesRequested,
-      createdAt: run.createdAt,
+      id: scan.id,
+      clientId: client.id,
+      rootUrl: client.rootUrl,
+      status: scan.status,
+      pagesRequested: scan.pagesRequested,
+      createdAt: scan.createdAt,
     },
     { status: 201 }
   );

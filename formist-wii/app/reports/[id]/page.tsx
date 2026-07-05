@@ -48,12 +48,12 @@ export default async function ReportPage({
         <div>
           <p className="text-muted-foreground text-sm font-medium">Website Intelligence Index Report</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">
-            {report.website.rootUrl}
+            {report.client.name ?? report.client.rootUrl}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Generated {new Date(report.generatedAt).toLocaleString()} · {report.pagesCrawled} pages
             crawled
-            {report.website.detectedCms === "wordpress" && " · WordPress detected"}
+            {report.client.detectedCms === "wordpress" && " · WordPress detected"}
           </p>
         </div>
         <ExportPdfButton />
@@ -116,7 +116,7 @@ export default async function ReportPage({
                   <span className="text-muted-foreground text-sm font-normal">{cs.score}/100</span>
                 </CardTitle>
                 <Progress value={cs.score} className="mt-1" />
-                <CardDescription>{cs.summary}</CardDescription>
+                <CardDescription>{cs.rationale}</CardDescription>
               </CardHeader>
               {cs.evidence.length > 0 && (
                 <CardContent className="pb-6">
@@ -124,20 +124,14 @@ export default async function ReportPage({
                     {cs.evidence.map((e) => (
                       <li key={e.id} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium capitalize">{e.checkName.replace(/_/g, " ")}</span>
+                          <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
                           <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
                             {e.severity}
                           </Badge>
                         </div>
-                        <p className="text-muted-foreground">{e.detail}</p>
+                        <p className="text-muted-foreground">{e.finding}</p>
                         {e.pageUrl && (
                           <p className="text-muted-foreground truncate text-xs">{e.pageUrl}</p>
-                        )}
-                        {e.recommendation && (
-                          <p className="text-foreground text-xs">
-                            <span className="font-medium">Recommendation: </span>
-                            {e.recommendation}
-                          </p>
                         )}
                       </li>
                     ))}

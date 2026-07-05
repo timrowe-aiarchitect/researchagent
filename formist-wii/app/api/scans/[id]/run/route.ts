@@ -12,18 +12,18 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  const run = await prisma.run.findUnique({ where: { id } });
-  if (!run) return jsonError(404, "Scan not found");
+  const scan = await prisma.scan.findUnique({ where: { id } });
+  if (!scan) return jsonError(404, "Scan not found");
 
-  if (!RESTARTABLE_STATUSES.has(run.status)) {
+  if (!RESTARTABLE_STATUSES.has(scan.status)) {
     return NextResponse.json(
-      { id: run.id, status: run.status, message: "Scan is already running or complete." },
+      { id: scan.id, status: scan.status, message: "Scan is already running or complete." },
       { status: 200 }
     );
   }
 
-  if (run.status === "failed") {
-    await prisma.run.update({
+  if (scan.status === "failed") {
+    await prisma.scan.update({
       where: { id },
       data: { status: "queued", failureReason: null, completedAt: null },
     });
@@ -31,7 +31,7 @@ export async function POST(
 
   await scanQueue.add(
     "run-scan",
-    { runId: id },
+    { scanId: id },
     { jobId: id }
   );
 

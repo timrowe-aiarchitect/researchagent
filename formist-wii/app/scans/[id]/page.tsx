@@ -12,26 +12,26 @@ export default async function ScanDetailPage({
 }) {
   const { id } = await params;
 
-  const run = await prisma.run.findUnique({
+  const scan = await prisma.scan.findUnique({
     where: { id },
-    include: { website: true, report: { select: { id: true } } },
+    include: { client: true, report: { select: { id: true } } },
   });
 
-  if (!run) notFound();
+  if (!scan) notFound();
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Scan status</h1>
-      <p className="text-muted-foreground mt-1 truncate text-sm">{run.website.rootUrl}</p>
+      <p className="text-muted-foreground mt-1 truncate text-sm">{scan.client.rootUrl}</p>
 
       <ScanStatus
-        scanId={run.id}
+        scanId={scan.id}
         initial={{
-          status: run.status,
-          pagesRequested: run.pagesRequested,
-          pagesCrawled: run.pagesCrawled,
-          failureReason: run.failureReason,
-          reportId: run.report?.id ?? null,
+          status: scan.status,
+          pagesRequested: scan.pagesRequested,
+          pagesCrawled: scan.pagesCrawled,
+          failureReason: scan.failureReason,
+          reportId: scan.report?.id ?? null,
         }}
       />
     </div>

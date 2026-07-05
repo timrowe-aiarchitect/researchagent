@@ -9,25 +9,25 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const run = await prisma.run.findUnique({
+  const scan = await prisma.scan.findUnique({
     where: { id },
-    include: { website: true, report: { select: { id: true } } },
+    include: { client: true, report: { select: { id: true } } },
   });
 
-  if (!run) return jsonError(404, "Scan not found");
+  if (!scan) return jsonError(404, "Scan not found");
 
   return NextResponse.json({
-    id: run.id,
-    websiteId: run.websiteId,
-    rootUrl: run.website.rootUrl,
-    detectedCms: run.website.detectedCms,
-    status: run.status,
-    pagesRequested: run.pagesRequested,
-    pagesCrawled: run.pagesCrawled,
-    startedAt: run.startedAt,
-    completedAt: run.completedAt,
-    failureReason: run.failureReason,
-    createdAt: run.createdAt,
-    reportId: run.report?.id ?? null,
+    id: scan.id,
+    clientId: scan.clientId,
+    rootUrl: scan.client.rootUrl,
+    detectedCms: scan.client.detectedCms,
+    status: scan.status,
+    pagesRequested: scan.pagesRequested,
+    pagesCrawled: scan.pagesCrawled,
+    startedAt: scan.startedAt,
+    completedAt: scan.completedAt,
+    failureReason: scan.failureReason,
+    createdAt: scan.createdAt,
+    reportId: scan.report?.id ?? null,
   });
 }

@@ -16,7 +16,7 @@ enum DetectedCms {
   unknown
 }
 
-enum RunStatus {
+enum ScanStatus {
   queued
   crawling
   scoring
@@ -53,59 +53,53 @@ enum Severity {
   critical
 }
 
-enum BusinessRisk {
-  low
-  medium
-  high
+enum CategoryStatus {
+  good
+  needs_attention
+  poor
   critical
 }
 
-enum Grade {
-  A
-  B
-  C
-  D
-  F
+model Client {
+  id          String      @id @default(cuid())
+  name        String?
+  rootUrl     String      @unique @map("root_url")
+  detectedCms DetectedCms @default(unknown) @map("detected_cms")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  scans Scan[]
+
+  @@map("clients")
 }
 
-model Website {
-  id           String      @id @default(cuid())
-  rootUrl      String      @unique @map("root_url")
-  detectedCms  DetectedCms @default(unknown) @map("detected_cms")
-  createdAt    DateTime    @default(now()) @map("created_at")
+model Scan {
+  id             String     @id @default(cuid())
+  clientId       String     @map("client_id")
+  client         Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  requestedBy    String     @map("requested_by")
+  status         ScanStatus @default(queued)
+  startedAt      DateTime?  @map("started_at")
+  completedAt    DateTime?  @map("completed_at")
+  pagesRequested Int        @default(25) @map("pages_requested")
+  pagesCrawled   Int        @default(0) @map("pages_crawled_count")
+  failureReason  String?    @map("failure_reason")
+  createdAt      DateTime   @default(now()) @map("created_at")
 
-  runs Run[]
+  pages           Page[]
+  evidenceItems   EvidenceItem[]
+  categoryScores  CategoryScore[]
+  recommendations Recommendation[]
+  report          Report?
 
-  @@map("websites")
-}
-
-model Run {
-  id             String    @id @default(cuid())
-  websiteId      String    @map("website_id")
-  website        Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
-  requestedBy    String    @map("requested_by")
-  status         RunStatus @default(queued)
-  startedAt      DateTime? @map("started_at")
-  completedAt    DateTime? @map("completed_at")
-  pagesRequested Int       @default(25) @map("pages_requested")
-  pagesCrawled   Int       @default(0) @map("pages_crawled_count")
-  failureReason  String?   @map("failure_reason")
-  createdAt      DateTime  @default(now()) @map("created_at")
-
-  pages          Page[]
-  evidenceItems  EvidenceItem[]
-  categoryScores CategoryScore[]
-  report         Report?
-
-  @@index([websiteId])
+  @@index([clientId])
   @@index([status])
-  @@map("runs")
+  @@map("scans")
 }
 
 model Page {
   id          String      @id @default(cuid())
-  runId       String      @map("run_id")
-  run         Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  scanId      String      @map("scan_id")
+  scan        Scan        @relation(fields: [scanId], references: [id], onDelete: Cascade)
   url         String
   httpStatus  Int?        @map("http_status")
   crawlStatus CrawlStatus @map("crawl_status")
@@ -113,78 +107,70 @@ model Page {
   rendered    Boolean     @default(false)
   fetchedAt   DateTime    @default(now()) @map("fetched_at")
 
-  evidenceItems EvidenceItem[]
-
-  @@index([runId])
+  @@index([scanId])
   @@map("pages")
 }
 
 model EvidenceItem {
-  id             String           @id @default(cuid())
-  runId          String           @map("run_id")
-  run            Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
-  pageId         String?          @map("page_id")
-  page           Page?            @relation(fields: [pageId], references: [id], onDelete: SetNull)
-  category       EvidenceCategory
-  checkName      String           @map("check_name")
-  observedValue  String           @map("observed_value")
-  severity       Severity
-  passed         Boolean
-  detail         String
-  recommendation String?
-  createdAt      DateTime         @default(now()) @map("created_at")
+  id         String           @id @default(cuid())
+  scanId     String           @map("scan_id")
+  scan       Scan             @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  category   EvidenceCategory
+  source     String
+  severity   Severity
+  finding    String
+  url        String?
+  rawData    Json?            @map("raw_data")
+  confidence Float            @default(1)
+  createdAt  DateTime         @default(now()) @map("created_at")
 
-  @@index([runId, category])
-  @@index([pageId])
+  @@index([scanId, category])
   @@map("evidence_items")
 }
 
 model CategoryScore {
-  id          String           @id @default(cuid())
-  runId       String           @map("run_id")
-  run         Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
-  category    EvidenceCategory
-  score       Float
-  summary     String
-  evidenceIds String[]         @map("evidence_ids")
-  createdAt   DateTime         @default(now()) @map("created_at")
+  id           String           @id @default(cuid())
+  scanId       String           @map("scan_id")
+  scan         Scan             @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  category     EvidenceCategory
+  score        Float
+  maxScore     Float            @default(100) @map("max_score")
+  status       CategoryStatus
+  rationale    String
+  confidence   Float            @default(1)
+  evidenceRefs Json             @map("evidence_refs")
+  createdAt    DateTime         @default(now()) @map("created_at")
 
-  @@unique([runId, category])
+  @@unique([scanId, category])
   @@map("category_scores")
 }
 
-model Report {
-  id            String       @id @default(cuid())
-  runId         String       @unique @map("run_id")
-  run           Run          @relation(fields: [runId], references: [id], onDelete: Cascade)
-  overallScore    Float        @map("overall_score")
-  grade           Grade
-  businessRisk    BusinessRisk @map("business_risk")
-  aiReadiness     Float        @map("ai_readiness")
-  executiveSummary String      @map("executive_summary")
-  recommendations String[]    @map("recommendations")
-  methodologyNote String      @map("methodology_note")
-  pdfUrl          String?     @map("pdf_url")
-  generatedAt     DateTime    @default(now()) @map("generated_at")
+model Recommendation {
+  id           String           @id @default(cuid())
+  scanId       String           @map("scan_id")
+  scan         Scan             @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  priorityRank Int              @map("priority_rank")
+  title        String
+  category     EvidenceCategory
+  impact       String
+  effort       String
+  recommendation String
+  evidenceRefs Json             @map("evidence_refs")
+  createdAt    DateTime         @default(now()) @map("created_at")
 
-  roadmapItems RoadmapItem[]
-
-  @@map("reports")
+  @@index([scanId])
+  @@map("recommendations")
 }
 
-model RoadmapItem {
-  id               String           @id @default(cuid())
-  reportId         String           @map("report_id")
-  report           Report           @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  priorityRank     Int              @map("priority_rank")
-  title            String
-  category         EvidenceCategory
-  impact           String
-  effort           String
-  recommendation   String
-  linkedEvidenceIds String[]        @map("linked_evidence_ids")
-  createdAt        DateTime         @default(now()) @map("created_at")
+model Report {
+  id               String   @id @default(cuid())
+  scanId           String   @unique @map("scan_id")
+  scan             Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  executiveSummary String   @map("executive_summary")
+  fullReport       Json     @map("full_report")
+  html             String
+  pdfUrl           String?  @map("pdf_url")
+  generatedAt      DateTime @default(now()) @map("generated_at")
 
-  @@index([reportId])
-  @@map("roadmap_items")
+  @@map("reports")
 }
