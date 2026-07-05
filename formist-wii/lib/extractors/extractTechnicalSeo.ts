@@ -3,9 +3,11 @@ import type { EvidenceExtractor, NormalizedEvidence, ScanContext } from "./types
 import { isCrawlOk, isHomepage } from "./types";
 
 /**
- * Technical SEO: crawlability, indexability, and the structural fundamentals search engines
- * rely on (titles, meta descriptions, headings, canonicals, robots.txt/sitemap.xml, redirects,
- * internal link health).
+ * Technical SEO: crawlability, indexability, and site architecture — robots.txt/sitemap.xml,
+ * HTTP status health, redirect chains, canonical correctness, noindex directives, internal
+ * link health. Per docs/PRD-website-intelligence-index-mvp.md §7, title tags, meta descriptions,
+ * and heading hierarchy belong to On-page SEO, not here — see extractOnPageSeo.ts. Keeping them
+ * out of this file avoids scoring the same fact twice across two category weights.
  *
  * The brief for this extractor asks for "critical / warning / info" severities. The schema's
  * Severity enum is info | minor | moderate | major | critical (no distinct "warning" value), so
@@ -25,12 +27,7 @@ export const extractTechnicalSeo: EvidenceExtractor = (scan, page) => {
   items.push(checkIndexability(page));
   items.push(checkNoindexDirective(page));
   items.push(checkRedirectChain(page));
-  items.push(checkMissingTitle(page));
-  items.push(checkTitleLength(page));
-  items.push(checkMissingMetaDescription(page));
   items.push(...checkCanonical(page));
-  items.push(checkMissingH1(page));
-  items.push(checkMultipleH1(page));
   items.push(...checkInternalBrokenLinks(scan, page));
 
   if (!isHomepage(scan, page)) {
@@ -41,8 +38,6 @@ export const extractTechnicalSeo: EvidenceExtractor = (scan, page) => {
   if (isHomepage(scan, page)) {
     items.push(checkRobotsTxt(scan));
     items.push(checkSitemapXml(scan));
-    items.push(...checkDuplicateTitles(scan));
-    items.push(...checkDuplicateMetaDescriptions(scan));
   }
 
   return items;
@@ -148,55 +143,6 @@ function checkRedirectChain(page: CrawledPageData): NormalizedEvidence {
   };
 }
 
-function checkMissingTitle(page: CrawledPageData): NormalizedEvidence {
-  const hasTitle = Boolean(page.title);
-  return {
-    url: page.requestedUrl,
-    category: "technical_seo",
-    source: "missing_title",
-    severity: hasTitle ? "info" : "critical",
-    finding: hasTitle ? `Title tag present: "${page.title}"` : "Page has no <title> tag.",
-    rawData: { title: page.title },
-    confidence: 1,
-    recommendationText: hasTitle ? null : "Add a descriptive <title> tag to this page.",
-  };
-}
-
-function checkTitleLength(page: CrawledPageData): NormalizedEvidence {
-  const title = page.title;
-  const length = title?.length ?? 0;
-  const ok = title !== null && length >= 10 && length <= 60;
-  return {
-    url: page.requestedUrl,
-    category: "technical_seo",
-    source: "title_length",
-    severity: title === null ? "info" : ok ? "info" : "moderate",
-    finding: title === null ? "No title to measure." : `Title is ${length} character(s) long.`,
-    rawData: { length },
-    confidence: 1,
-    recommendationText:
-      title !== null && !ok ? "Adjust the title length to roughly 10-60 characters." : null,
-  };
-}
-
-function checkMissingMetaDescription(page: CrawledPageData): NormalizedEvidence {
-  const hasDescription = Boolean(page.metaDescription);
-  return {
-    url: page.requestedUrl,
-    category: "technical_seo",
-    source: "missing_meta_description",
-    severity: hasDescription ? "info" : "moderate",
-    finding: hasDescription
-      ? `Meta description present: "${page.metaDescription}"`
-      : "Page has no meta description.",
-    rawData: { metaDescription: page.metaDescription },
-    confidence: 1,
-    recommendationText: hasDescription
-      ? null
-      : "Add a meta description summarizing the page in ~150-160 characters.",
-  };
-}
-
 function checkCanonical(page: CrawledPageData): NormalizedEvidence[] {
   const canonical = page.canonical;
   if (!canonical) {
@@ -243,38 +189,6 @@ function checkCanonical(page: CrawledPageData): NormalizedEvidence[] {
   ];
 }
 
-function checkMissingH1(page: CrawledPageData): NormalizedEvidence {
-  const missing = page.h1Count === 0;
-  return {
-    url: page.requestedUrl,
-    category: "technical_seo",
-    source: "missing_h1",
-    severity: missing ? "moderate" : "info",
-    finding: missing ? "Page has no <h1> tag." : `Page has ${page.h1Count} <h1> tag(s).`,
-    rawData: { h1Count: page.h1Count },
-    confidence: 1,
-    recommendationText: missing ? "Add a single <h1> that describes the page's main topic." : null,
-  };
-}
-
-function checkMultipleH1(page: CrawledPageData): NormalizedEvidence {
-  const multiple = page.h1Count > 1;
-  return {
-    url: page.requestedUrl,
-    category: "technical_seo",
-    source: "multiple_h1",
-    severity: multiple ? "moderate" : "info",
-    finding: multiple
-      ? `Page has ${page.h1Count} <h1> tags (expected exactly one).`
-      : "Page does not have multiple <h1> tags.",
-    rawData: { h1Count: page.h1Count },
-    confidence: 1,
-    recommendationText: multiple
-      ? "Use exactly one <h1> per page for a clear content hierarchy."
-      : null,
-  };
-}
-
 function checkRobotsTxt(scan: ScanContext): NormalizedEvidence {
   return {
     url: null,
@@ -305,58 +219,6 @@ function checkSitemapXml(scan: ScanContext): NormalizedEvidence {
       ? null
       : "Publish an XML sitemap and reference it from robots.txt.",
   };
-}
-
-function checkDuplicateTitles(scan: ScanContext): NormalizedEvidence[] {
-  const successfulPages = scan.allPages.filter(isCrawlOk);
-  const seen = new Map<string, number>();
-  for (const p of successfulPages) {
-    if (!p.title) continue;
-    seen.set(p.title, (seen.get(p.title) ?? 0) + 1);
-  }
-  const duplicateGroups = [...seen.values()].filter((c) => c > 1).length;
-  return [
-    {
-      url: null,
-      category: "technical_seo",
-      source: "duplicate_titles",
-      severity: duplicateGroups > 0 ? "moderate" : "info",
-      finding:
-        duplicateGroups > 0
-          ? `${duplicateGroups} title(s) are reused across multiple crawled pages.`
-          : "All crawled pages have unique title tags.",
-      rawData: { duplicateGroups, pagesChecked: successfulPages.length },
-      confidence: 1,
-      recommendationText:
-        duplicateGroups > 0 ? "Give each page a unique, descriptive title tag." : null,
-    },
-  ];
-}
-
-function checkDuplicateMetaDescriptions(scan: ScanContext): NormalizedEvidence[] {
-  const successfulPages = scan.allPages.filter(isCrawlOk);
-  const seen = new Map<string, number>();
-  for (const p of successfulPages) {
-    if (!p.metaDescription) continue;
-    seen.set(p.metaDescription, (seen.get(p.metaDescription) ?? 0) + 1);
-  }
-  const duplicateGroups = [...seen.values()].filter((c) => c > 1).length;
-  return [
-    {
-      url: null,
-      category: "technical_seo",
-      source: "duplicate_meta_descriptions",
-      severity: duplicateGroups > 0 ? "moderate" : "info",
-      finding:
-        duplicateGroups > 0
-          ? `${duplicateGroups} meta description(s) are reused across multiple crawled pages.`
-          : "All crawled pages with a meta description have unique text.",
-      rawData: { duplicateGroups, pagesChecked: successfulPages.length },
-      confidence: 1,
-      recommendationText:
-        duplicateGroups > 0 ? "Write a unique meta description for each page." : null,
-    },
-  ];
 }
 
 /** Only flags links to URLs that were themselves crawled in this scan and came back broken. */
