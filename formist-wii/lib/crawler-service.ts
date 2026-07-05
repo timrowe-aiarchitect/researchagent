@@ -87,6 +87,7 @@ export type CrawledPageData = {
   isWordPress: boolean;
   wordpressVersion: string | null;
   wordpressPlugins: string[];
+  loadTimeMs: number;
   // Consumed only by the crawl-queue prioritization in crawlWebsite(), not persisted.
   navLinks: string[];
   footerLinks: string[];
@@ -390,13 +391,16 @@ async function crawlSinglePage(
     isWordPress: false,
     wordpressVersion: null,
     wordpressPlugins: [],
+    loadTimeMs: 0,
     navLinks: [],
     footerLinks: [],
   };
 
   try {
+    const navStart = Date.now();
     const response = await page.goto(url, { timeout: navTimeoutMs, waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle", { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {});
+    const loadTimeMs = Date.now() - navStart;
 
     const httpStatus = response?.status() ?? null;
     const finalUrl = page.url();
@@ -444,6 +448,7 @@ async function crawlSinglePage(
       isWordPress: wp.isWordPress,
       wordpressVersion: wp.version,
       wordpressPlugins: wp.plugins,
+      loadTimeMs,
       navLinks: dom.navLinks,
       footerLinks: dom.footerLinks,
     };
