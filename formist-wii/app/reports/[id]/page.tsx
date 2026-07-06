@@ -78,6 +78,38 @@ export default async function ReportPage({
         <Card className="mt-4">
           <CardContent className="pt-6 pb-6 text-sm leading-relaxed">{data.executiveSummary}</CardContent>
         </Card>
+        {(data.topRisks.length > 0 || data.topOpportunities.length > 0) && (
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {data.topRisks.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Top risks</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-6">
+                  <ul className="list-disc space-y-1 pl-5 text-sm">
+                    {data.topRisks.map((risk, i) => (
+                      <li key={i}>{risk}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+            {data.topOpportunities.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Top opportunities</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-6">
+                  <ul className="list-disc space-y-1 pl-5 text-sm">
+                    {data.topOpportunities.map((opportunity, i) => (
+                      <li key={i}>{opportunity}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 3. Executive Scorecard */}
@@ -342,7 +374,7 @@ export default async function ReportPage({
       {/* 9. Priority Roadmap */}
       <div className="mt-8">
         <h2 className="text-lg font-semibold tracking-tight">Priority Roadmap</h2>
-        <p className="text-muted-foreground text-sm">Ranked by business impact vs. estimated effort.</p>
+        <p className="text-muted-foreground text-sm">{data.priorityRoadmapNarrative}</p>
         <Card className="mt-4">
           <CardContent className="pb-6 pt-6">
             <Table>

@@ -12,6 +12,7 @@ import {
 } from "@/lib/report-service";
 import { buildReportHtml } from "@/lib/report-html";
 import type { QualitativeAssessment } from "@/lib/qualitative-assessment";
+import type { NarrativeReport } from "@/lib/report-narrative";
 
 function evidence(overrides: Partial<ReportEvidenceInput> = {}): ReportEvidenceInput {
   return {
@@ -96,9 +97,19 @@ function baseInput(overrides: Partial<ReportInput> = {}): ReportInput {
     aiReadiness: { score: 55, label: "Medium" },
     priority: "medium",
     qualitativeAssessment,
+    narrative: null,
     ...overrides,
   };
 }
+
+const narrative: NarrativeReport = {
+  executiveSummary: "Example Co's site is solid but has room to grow in technical foundations.",
+  topRisks: ["Missing sitemap makes discovery harder for search engines."],
+  topOpportunities: ["Strong homepage messaging is a foundation to build on."],
+  categorySummaries: [{ category: "technical_seo", summary: "Technical SEO needs a sitemap fix." }],
+  priorityRoadmapNarrative: "Start with the sitemap fix — it's low effort and unblocks discovery.",
+  recommendedNextSteps: ["Publish a sitemap.xml and submit it to Search Console this week."],
+};
 
 describe("buildReportData", () => {
   it("assembles all 11 report sections from the raw inputs", () => {
@@ -194,6 +205,70 @@ describe("buildReportData", () => {
     );
 
     expect(data.screenshots).toEqual([{ pageUrl: "https://example.com", path: "screenshots/scan-1/home.png" }]);
+  });
+
+  it("falls back to deterministic template prose when no narrative was generated", () => {
+    const data = buildReportData(baseInput({ narrative: null }));
+
+    expect(data.executiveSummary).toContain("https://example.com");
+    expect(data.topRisks).toEqual(["No sitemap.xml was found."]);
+    expect(data.topOpportunities[0]).toContain("Technical SEO is a relative strength to build on");
+    expect(data.priorityRoadmapNarrative).toBe("Ranked by business impact vs. estimated effort.");
+    expect(data.recommendedNextSteps).toEqual(["Add a sitemap.xml and submit it to Search Console."]);
+    expect(data.categoryDeepDives[0].rationale).toBe("Half of technical SEO checks passed.");
+  });
+
+  it("uses the LLM-generated narrative prose when present, without touching any score, status, or evidence ref", () => {
+    const data = buildReportData(baseInput({ narrative }));
+
+    expect(data.executiveSummary).toBe(narrative.executiveSummary);
+    expect(data.topRisks).toEqual(narrative.topRisks);
+    expect(data.topOpportunities).toEqual(narrative.topOpportunities);
+    expect(data.priorityRoadmapNarrative).toBe(narrative.priorityRoadmapNarrative);
+    expect(data.recommendedNextSteps).toEqual(narrative.recommendedNextSteps);
+    expect(data.categoryDeepDives[0].rationale).toBe("Technical SEO needs a sitemap fix.");
+
+    // The narrative only replaces displayed prose — the underlying score, status, and evidence
+    // references are exactly what the deterministic scoring engine computed.
+    expect(data.categoryDeepDives[0].score).toBe(6);
+    expect(data.categoryDeepDives[0].maxScore).toBe(12);
+    expect(data.categoryDeepDives[0].status).toBe("needs_attention");
+    expect(data.categoryDeepDives[0].evidence).toEqual(data.appendixEvidence[0].items);
+  });
+
+  it("falls back to the deterministic rationale for a category the narrative didn't cover", () => {
+    const data = buildReportData(
+      baseInput({
+        categoryScores: [
+          categoryScore(),
+          categoryScore({
+            category: "performance",
+            maxScore: 12,
+            evidenceRefs: [],
+            rationale: "Largest Contentful Paint is slow on mobile.",
+          }),
+        ],
+        narrative,
+      })
+    );
+
+    const performance = data.categoryDeepDives.find((cs) => cs.category === "performance")!;
+    expect(performance.rationale).toBe("Largest Contentful Paint is slow on mobile.");
+  });
+
+  it("caps narrative topRisks/topOpportunities at 5 even if the LLM returned more", () => {
+    const data = buildReportData(
+      baseInput({
+        narrative: {
+          ...narrative,
+          topRisks: ["r1", "r2", "r3", "r4", "r5", "r6"],
+          topOpportunities: ["o1", "o2", "o3", "o4", "o5", "o6"],
+        },
+      })
+    );
+
+    expect(data.topRisks).toHaveLength(5);
+    expect(data.topOpportunities).toHaveLength(5);
   });
 });
 

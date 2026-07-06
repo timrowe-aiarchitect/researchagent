@@ -5,6 +5,7 @@ import { isCrawlOk } from "@/lib/extractors/types";
 import { fetchPageSpeedForPages, PSI_MAX_PRIORITY_PAGES } from "@/lib/pagespeed-service";
 import { computeScanScore, isPassing } from "@/lib/scoring";
 import { generateQualitativeAssessment } from "@/lib/qualitative-assessment";
+import { generateReportNarrative } from "@/lib/report-narrative";
 import { buildReportData, generateReportPdf } from "@/lib/report-service";
 import { buildReportHtml } from "@/lib/report-html";
 import type { Prisma } from "@/generated/prisma/client";
@@ -232,6 +233,26 @@ async function scoreAndFinalize(
     .slice(0, MAX_SCREENSHOTS_IN_REPORT)
     .map((p) => ({ pageUrl: p.requestedUrl, path: p.screenshotPath }));
 
+  // Purely a narrative layer over the already-computed scores/evidence/roadmap below — never
+  // alters them. Gracefully resolves to null (no API key, network failure, bad response), in
+  // which case buildReportData() falls back to its own deterministic prose for every field.
+  const narrative = await generateReportNarrative({
+    scan: {
+      rootUrl,
+      clientName: clientContext.name,
+      industry: clientContext.industry,
+      conversionGoal: clientContext.conversionGoal,
+    },
+    overallScore,
+    grade,
+    businessRisk,
+    aiReadiness,
+    priority,
+    categoryScores: scoring.categoryScores,
+    evidenceItems,
+    recommendations: roadmap,
+  });
+
   const reportData = buildReportData({
     scan: {
       rootUrl,
@@ -252,6 +273,7 @@ async function scoreAndFinalize(
     aiReadiness,
     priority,
     qualitativeAssessment,
+    narrative,
   });
 
   const html = buildReportHtml(reportData);

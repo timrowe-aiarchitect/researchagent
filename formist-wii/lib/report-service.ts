@@ -10,6 +10,7 @@ import {
   type ReadinessLabel,
 } from "@/lib/scoring";
 import type { QualitativeAssessment } from "@/lib/qualitative-assessment";
+import type { NarrativeReport } from "@/lib/report-narrative";
 import type {
   CategoryStatus,
   CrawlStatus,
@@ -36,6 +37,7 @@ const PDF_RENDER_TIMEOUT_MS = 30000;
 
 const KEY_FINDINGS_LIMIT = 8;
 const BUSINESS_RISK_DRIVERS_LIMIT = 5;
+const TOP_LIST_LIMIT = 5;
 const SEVERITY_RANK: Record<Severity, number> = { info: 0, minor: 1, moderate: 2, major: 3, critical: 4 };
 
 // AI discoverability and WordPress maintainability get their own dedicated sections (7 and 8), so
@@ -98,6 +100,7 @@ export type ReportInput = {
   aiReadiness: { score: number; label: ReadinessLabel };
   priority: Priority;
   qualitativeAssessment: QualitativeAssessment | null;
+  narrative: NarrativeReport | null;
 };
 
 export type ReportEvidenceItem = {
@@ -131,6 +134,8 @@ export type ReportData = {
     grade: Grade;
   };
   executiveSummary: string;
+  topRisks: string[];
+  topOpportunities: string[];
   executiveScorecard: {
     overallScore: number;
     grade: Grade;
@@ -179,6 +184,7 @@ export type ReportData = {
         evidence: ReportEvidenceItem[];
       }
     | { applicable: false; note: string };
+  priorityRoadmapNarrative: string;
   priorityRoadmap: {
     priorityRank: number;
     title: string;
@@ -203,7 +209,8 @@ function toEvidenceItem(e: ReportEvidenceInput): ReportEvidenceItem {
 
 function buildCategorySummary(
   cs: ReportCategoryScoreInput,
-  evidenceById: Map<string, ReportEvidenceInput>
+  evidenceById: Map<string, ReportEvidenceInput>,
+  narrativeSummaries: Map<EvidenceCategory, string>
 ): ReportCategorySummary {
   const evidence = cs.evidenceRefs
     .map((id) => evidenceById.get(id))
@@ -215,7 +222,7 @@ function buildCategorySummary(
     score: cs.score,
     maxScore: cs.maxScore,
     status: cs.status,
-    rationale: cs.rationale,
+    rationale: narrativeSummaries.get(cs.category) ?? cs.rationale,
     confidence: cs.confidence,
     evidence,
   };
@@ -237,6 +244,23 @@ function buildExecutiveSummary(input: ReportInput): string {
     `The findings below are organized by category, with every score traced to specific evidence, ` +
     `and a priority roadmap sequencing the highest-value next steps.`
   );
+}
+
+// Deterministic fallback for "top opportunities" when no narrative was generated: the
+// highest-scoring categories, described via their own already-computed rationale text — grounded
+// in evidence, never fabricated.
+function buildFallbackTopOpportunities(categoryScores: ReportCategoryScoreInput[]): string[] {
+  return [...categoryScores]
+    .filter((cs) => cs.maxScore > 0)
+    .sort((a, b) => b.score / b.maxScore - a.score / a.maxScore)
+    .slice(0, BUSINESS_RISK_DRIVERS_LIMIT)
+    .map((cs) => `${CATEGORY_LABELS[cs.category]} is a relative strength to build on: ${cs.rationale}`);
+}
+
+function buildFallbackRoadmapNarrative(roadmapLength: number): string {
+  return roadmapLength > 0
+    ? "Ranked by business impact vs. estimated effort."
+    : "No high-priority issues were identified in this scan.";
 }
 
 function buildBusinessRiskDrivers(evidenceItems: ReportEvidenceInput[]): string[] {
@@ -277,6 +301,9 @@ function buildKeyFindings(
 
 export function buildReportData(input: ReportInput): ReportData {
   const evidenceById = new Map(input.evidenceItems.map((e) => [e.id, e]));
+  const narrativeSummaries = new Map(
+    (input.narrative?.categorySummaries ?? []).map((cs) => [cs.category, cs.summary] as const)
+  );
   const isWordPress = input.categoryScores.some((cs) => cs.category === "wordpress_maintainability");
 
   const methodologyNote = isWordPress
@@ -296,12 +323,12 @@ export function buildReportData(input: ReportInput): ReportData {
   const categoryDeepDives = input.categoryScores
     .filter((cs) => !DEDICATED_SECTION_CATEGORIES.includes(cs.category))
     .sort((a, b) => b.score / b.maxScore - a.score / a.maxScore)
-    .map((cs) => buildCategorySummary(cs, evidenceById));
+    .map((cs) => buildCategorySummary(cs, evidenceById, narrativeSummaries));
 
   const aiCategoryScore = input.categoryScores.find((cs) => cs.category === "ai_discoverability");
   const aiDiscoverabilityAssessment: ReportData["aiDiscoverabilityAssessment"] = aiCategoryScore
     ? {
-        ...buildCategorySummary(aiCategoryScore, evidenceById),
+        ...buildCategorySummary(aiCategoryScore, evidenceById, narrativeSummaries),
         strategistPerspective: input.qualitativeAssessment?.aiDiscoverability ?? null,
       }
     : {
@@ -316,7 +343,7 @@ export function buildReportData(input: ReportInput): ReportData {
 
   const wpCategoryScore = input.categoryScores.find((cs) => cs.category === "wordpress_maintainability");
   const wordpressMaintainabilityAssessment: ReportData["wordpressMaintainabilityAssessment"] = wpCategoryScore
-    ? { applicable: true, ...buildCategorySummary(wpCategoryScore, evidenceById) }
+    ? { applicable: true, ...buildCategorySummary(wpCategoryScore, evidenceById, narrativeSummaries) }
     : {
         applicable: false,
         note: "This site was not detected as running WordPress, so WordPress maintainability doesn't apply. Its points were redistributed across the other 9 categories rather than scored as a gap.",
@@ -334,7 +361,19 @@ export function buildReportData(input: ReportInput): ReportData {
       recommendation: r.recommendation,
     }));
 
-  const recommendedNextSteps = [...new Set(input.recommendations.map((r) => r.recommendation))].slice(0, 6);
+  const recommendedNextSteps = input.narrative?.recommendedNextSteps.length
+    ? input.narrative.recommendedNextSteps.slice(0, 6)
+    : [...new Set(input.recommendations.map((r) => r.recommendation))].slice(0, 6);
+
+  const keyFindings = buildKeyFindings(input.evidenceItems);
+
+  const topRisks = input.narrative?.topRisks.length
+    ? input.narrative.topRisks.slice(0, TOP_LIST_LIMIT)
+    : keyFindings.slice(0, TOP_LIST_LIMIT).map((f) => f.finding);
+
+  const topOpportunities = input.narrative?.topOpportunities.length
+    ? input.narrative.topOpportunities.slice(0, TOP_LIST_LIMIT)
+    : buildFallbackTopOpportunities(input.categoryScores);
 
   const evidenceByCategory = new Map<EvidenceCategory, ReportEvidenceInput[]>();
   for (const e of input.evidenceItems) {
@@ -361,7 +400,9 @@ export function buildReportData(input: ReportInput): ReportData {
       overallScore: input.overallScore,
       grade: input.grade,
     },
-    executiveSummary: buildExecutiveSummary(input),
+    executiveSummary: input.narrative?.executiveSummary ?? buildExecutiveSummary(input),
+    topRisks,
+    topOpportunities,
     executiveScorecard: {
       overallScore: input.overallScore,
       grade: input.grade,
@@ -372,10 +413,11 @@ export function buildReportData(input: ReportInput): ReportData {
       methodologyNote,
     },
     overallIndex: { overallScore: input.overallScore, grade: input.grade, categoryBreakdown },
-    keyFindings: buildKeyFindings(input.evidenceItems),
+    keyFindings,
     categoryDeepDives,
     aiDiscoverabilityAssessment,
     wordpressMaintainabilityAssessment,
+    priorityRoadmapNarrative: input.narrative?.priorityRoadmapNarrative ?? buildFallbackRoadmapNarrative(priorityRoadmap.length),
     priorityRoadmap,
     recommendedNextSteps,
     appendixEvidence,

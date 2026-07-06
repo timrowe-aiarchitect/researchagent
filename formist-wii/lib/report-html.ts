@@ -86,10 +86,17 @@ function renderCover(data: ReportData): string {
 }
 
 function renderExecutiveSummary(data: ReportData): string {
+  const risks = data.topRisks.length
+    ? `<div class="scorecard-cell"><p class="label">Top risks</p><ul class="plain-list">${data.topRisks.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul></div>`
+    : "";
+  const opportunities = data.topOpportunities.length
+    ? `<div class="scorecard-cell"><p class="label">Top opportunities</p><ul class="plain-list">${data.topOpportunities.map((o) => `<li>${escapeHtml(o)}</li>`).join("")}</ul></div>`
+    : "";
   return `
     <section>
       <h2>Executive Summary</h2>
       <p>${escapeHtml(data.executiveSummary)}</p>
+      ${risks || opportunities ? `<div class="scorecard-grid" style="grid-template-columns: repeat(2, 1fr);">${risks}${opportunities}</div>` : ""}
     </section>`;
 }
 
@@ -255,6 +262,7 @@ function renderPriorityRoadmap(data: ReportData): string {
   return `
     <section>
       <h2>Priority Roadmap</h2>
+      <p class="muted small">${escapeHtml(data.priorityRoadmapNarrative)}</p>
       ${body}
     </section>`;
 }
