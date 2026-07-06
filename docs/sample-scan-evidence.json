@@ -1,0 +1,2025 @@
+{
+  "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+  "rootUrl": "http://127.0.0.1:8897/",
+  "blockedByRobots": false,
+  "pagesCrawled": 4,
+  "evidenceItems": [
+    {
+      "id": "cmr931ed90006lf7d15oyp549",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "status_code",
+      "severity": "info",
+      "finding": "Page responded with HTTP 200.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "httpStatus": 200
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed90007lf7d3juvijm5",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "indexable_pages",
+      "severity": "info",
+      "finding": "Page is indexable (successful status, no noindex directive).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "indexable": true,
+        "noindexed": false,
+        "httpStatus": 200
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed90008lf7dvdtn5qij",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "noindex_directive",
+      "severity": "info",
+      "finding": "No noindex directive was found.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "metaRobots": null,
+        "xRobotsTag": null
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed90009lf7djqm11vkl",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "redirect_chain",
+      "severity": "info",
+      "finding": "Page loaded directly with no redirect.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "finalUrl": "http://127.0.0.1:8897/",
+        "redirectChainLength": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000alf7d8ig9t7c3",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "canonical_cross_domain",
+      "severity": "info",
+      "finding": "Canonical URL: http://127.0.0.1:8897/",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.9,
+      "rawData": {
+        "canonical": "http://127.0.0.1:8897/",
+        "crossDomain": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000blf7dzdcf9su9",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "internal_broken_links",
+      "severity": "critical",
+      "finding": "2 internal link(s) on this page point to pages that failed to crawl.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.7,
+      "rawData": {
+        "brokenLinks": [
+          "http://127.0.0.1:8897/contact",
+          "http://127.0.0.1:8897/privacy"
+        ]
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000clf7d0fwpp6l3",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "robots_txt",
+      "severity": "info",
+      "finding": "robots.txt is present and does not block crawling entirely.",
+      "url": null,
+      "confidence": 1,
+      "rawData": {
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000dlf7dxc4kez1b",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "sitemap_xml",
+      "severity": "info",
+      "finding": "sitemap.xml was found at the site root.",
+      "url": null,
+      "confidence": 1,
+      "rawData": {
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000elf7d8k5m4fve",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "title_tag",
+      "severity": "info",
+      "finding": "Title tag: \"Acme Roofing | Residential Roofing Experts\"",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "length": 42
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000flf7dtxcsoqwt",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "meta_description",
+      "severity": "info",
+      "finding": "Meta description: \"Acme Roofing installs and repairs residential roofs across the metro area, serving homeowners since 2001.\"",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "length": 105
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000glf7djihxh8y8",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "missing_h1",
+      "severity": "info",
+      "finding": "Page has 1 <h1> tag(s).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "h1Count": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000hlf7duolqyd02",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "multiple_h1",
+      "severity": "info",
+      "finding": "Page does not have multiple <h1> tags.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "h1Count": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000ilf7dwjv5ix6t",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "title_uniqueness",
+      "severity": "info",
+      "finding": "All crawled pages have unique title tags.",
+      "url": null,
+      "confidence": 1,
+      "rawData": {
+        "pagesChecked": 2,
+        "duplicateTitleGroups": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000jlf7dqfv8r0zc",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "meta_description_uniqueness",
+      "severity": "info",
+      "finding": "All crawled pages with a meta description have unique text.",
+      "url": null,
+      "confidence": 1,
+      "rawData": {
+        "pagesChecked": 2,
+        "duplicateDescriptionGroups": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000klf7d28q1vxkb",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "organization_schema",
+      "severity": "moderate",
+      "finding": "No Organization schema was found.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000llf7dog6fa7f4",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "local_business_schema",
+      "severity": "info",
+      "finding": "not detected — no LocalBusiness schema was found (relevance to this business could not be confirmed).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.5,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000mlf7d0b7kw4rp",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "faq_schema",
+      "severity": "moderate",
+      "finding": "Page has FAQ-like content (Q&A headings or expandable sections) but no FAQPage schema.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.75,
+      "rawData": {
+        "present": false,
+        "hasFaqPattern": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000nlf7dmf7eu699",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "breadcrumb_schema",
+      "severity": "info",
+      "finding": "No BreadcrumbList schema on the homepage (not typically needed here).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000olf7dozm5amxv",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "faq_content",
+      "severity": "info",
+      "finding": "Page includes FAQ-style content (Q&A headings or expandable sections).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.7,
+      "rawData": {
+        "hasFaqPattern": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000plf7dg72neb61",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "answer_like_content",
+      "severity": "moderate",
+      "finding": "No concise lead paragraph was detected near the top of the page.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.6,
+      "rawData": {
+        "hasShortLeadParagraph": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000qlf7djiz74u9t",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "trust_signals",
+      "severity": "info",
+      "finding": "Detected trust signal(s): address, phone, credentials.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.6,
+      "rawData": {
+        "phone": true,
+        "author": false,
+        "address": true,
+        "credentials": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931ed9000rlf7d921svosg",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "crawlable_text_ratio",
+      "severity": "info",
+      "finding": "Page has 102 words of crawlable text.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "wordCount": 102,
+        "imageCount": 2
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000slf7d2yvd54pz",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "open_graph_tags",
+      "severity": "info",
+      "finding": "Page declares Open Graph title/description tags.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "tags": [
+          "og:title",
+          "og:description"
+        ],
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000tlf7dhcchz9yr",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "entity_consistency",
+      "severity": "info",
+      "finding": "not detected — no Organization schema name was found to check entity consistency against.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.3,
+      "rawData": {
+        "orgName": null
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000ulf7d64doe6os",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "clear_about_page",
+      "severity": "info",
+      "finding": "A clear About page was found with substantive content (153 words).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.8,
+      "rawData": {
+        "found": true,
+        "wordCount": 153
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000vlf7dxiyihlgg",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "clear_service_pages",
+      "severity": "moderate",
+      "finding": "not detected — no dedicated service/offering pages were found among crawled pages.",
+      "url": null,
+      "confidence": 0.7,
+      "rawData": {
+        "count": 0,
+        "found": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000wlf7d5wxiuk8q",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "llms_txt",
+      "severity": "minor",
+      "finding": "No llms.txt file was found at the site root.",
+      "url": null,
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000xlf7d8uu5fpsf",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "ai_crawler_access",
+      "severity": "info",
+      "finding": "robots.txt does not explicitly block any known AI crawlers.",
+      "url": null,
+      "confidence": 0.85,
+      "rawData": {
+        "blocked": []
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000ylf7d3unhovef",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "internal_linking_completeness",
+      "severity": "moderate",
+      "finding": "Internal linking gaps: no service page found; no proof page found; no contact page found.",
+      "url": null,
+      "confidence": 0.6,
+      "rawData": {
+        "counts": {
+          "proof": 0,
+          "contact": 0,
+          "service": 0
+        },
+        "missingKinds": [
+          "service",
+          "proof",
+          "contact"
+        ],
+        "unlinkedButPresent": []
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda000zlf7dke81oiiq",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "page_load_time",
+      "severity": "info",
+      "finding": "Page took 545ms to load (navigation to network-idle).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "loadTimeMs": 545
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0010lf7dsx2wdo79",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "script_weight",
+      "severity": "info",
+      "finding": "Page loads 0 external script(s).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.7,
+      "rawData": {
+        "totalScriptCount": 1,
+        "externalScriptCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0011lf7dndewt73s",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "response_compression",
+      "severity": "minor",
+      "finding": "Response does not appear to be compressed.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "contentEncoding": null
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0012lf7d9pca856m",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "pagespeed_analysis_mobile",
+      "severity": "info",
+      "finding": "not detected — PageSpeed Insights mobile analysis could not be completed (Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.). This is often the API's daily quota limit being reached.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.2,
+      "rawData": {
+        "error": "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.",
+        "fetched": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0013lf7d3s4ci2wv",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "pagespeed_analysis_desktop",
+      "severity": "info",
+      "finding": "not detected — PageSpeed Insights desktop analysis could not be completed (Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.). This is often the API's daily quota limit being reached.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.2,
+      "rawData": {
+        "error": "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.",
+        "fetched": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0014lf7dkbtmhmdn",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "image_alt_text",
+      "severity": "moderate",
+      "finding": "1 of 2 images on this page have alt text.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "total": 2,
+        "withAlt": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0015lf7d2qh079gt",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "html_lang_attribute",
+      "severity": "info",
+      "finding": "The <html> tag declares a lang attribute.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "lang": "en",
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0016lf7dfchrqqkr",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "heading_order",
+      "severity": "info",
+      "finding": "Heading levels progress without skipping (e.g. no h2 directly to h4).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.9,
+      "rawData": {
+        "skips": [],
+        "headingSequence": [
+          1,
+          2,
+          3,
+          3
+        ]
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0017lf7d0x3humnh",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "form_label_coverage",
+      "severity": "major",
+      "finding": "1 of 2 form field(s) have an accessible label (a <label>, aria-label, or aria-labelledby).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.9,
+      "rawData": {
+        "total": 2,
+        "labelled": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0018lf7d81pclfqv",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "link_text_quality",
+      "severity": "info",
+      "finding": "All 7 link(s) on this page have descriptive, accessible text.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.8,
+      "rawData": {
+        "totalLinks": 7,
+        "nonDescriptiveCount": 0,
+        "sampleNonDescriptive": [],
+        "emptyAccessibleNameCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0019lf7dwwn14omy",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "axe_image-alt",
+      "severity": "critical",
+      "finding": "Automated screening found a \"image-alt\" issue affecting 1 element(s) on this page (impact: critical): Ensure <img> elements have alternative text or a role of none or presentation This is automated accessibility screening (axe-core), not a full WCAG compliance audit — manual review by a person is still required to confirm compliance.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.9,
+      "rawData": {
+        "impact": "critical",
+        "ruleId": "image-alt",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/image-alt?application=axeAPI",
+        "affectedElementCount": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001alf7dvux2tect",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "https_enforced",
+      "severity": "critical",
+      "finding": "Homepage is served over plain HTTP.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "scheme": "http:"
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001blf7dx7wkm6vs",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "https_redirect",
+      "severity": "info",
+      "finding": "Plain HTTP does not appear to be reachable at all for this site, so it cannot be accessed over an insecure channel.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.8,
+      "rawData": {
+        "finalUrl": null,
+        "httpReachable": false,
+        "redirectsToHttps": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001clf7dkgvzi74q",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "hsts_header",
+      "severity": "moderate",
+      "finding": "Strict-Transport-Security header is missing.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "value": null,
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001dlf7diiiqp67h",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "content_security_policy",
+      "severity": "minor",
+      "finding": "Content-Security-Policy header is missing.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001elf7d0ebbbqzw",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "x_content_type_options",
+      "severity": "minor",
+      "finding": "X-Content-Type-Options: nosniff header is missing.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "value": null,
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001flf7d75lkroiq",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "clickjacking_protection",
+      "severity": "minor",
+      "finding": "No clickjacking protection (X-Frame-Options / frame-ancestors) was found.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001glf7dlo5r0r0d",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "referrer_policy",
+      "severity": "minor",
+      "finding": "Referrer-Policy header is missing.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "value": null,
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001hlf7dp3mjw8g1",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "permissions_policy",
+      "severity": "minor",
+      "finding": "Permissions-Policy header is missing.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "value": null,
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001ilf7dxh6nhh51",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "security",
+      "source": "mixed_content",
+      "severity": "info",
+      "finding": "not applicable — homepage is not served over HTTPS, so mixed content isn't a meaningful check here.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "applicable": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001jlf7dzsbh1we4",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "measurement_stack_detected",
+      "severity": "moderate",
+      "finding": "No recognizable analytics, tag-manager, or marketing pixel was detected on this page.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.85,
+      "rawData": {
+        "detectedVendorKeys": [],
+        "detectedVendorLabels": []
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001klf7dbog1658d",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "consent_mechanism",
+      "severity": "moderate",
+      "finding": "not detected — no consent management platform or cookie/consent banner was found on this page.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.7,
+      "rawData": {
+        "cmpDetected": null,
+        "genericBannerDetected": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001llf7db1rkdcx3",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "form_tracking_hints",
+      "severity": "moderate",
+      "finding": "Found 1 form(s) on this page but no visible hint that submissions are tracked (e.g. no submit-event handler or lead/conversion event was found in scripts).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.6,
+      "rawData": {
+        "formCount": 1,
+        "hintFound": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001mlf7d4wswzvh0",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "event_tracking_hints",
+      "severity": "moderate",
+      "finding": "not detected — no visible event-tracking calls were found on this page beyond basic pageview tracking.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.55,
+      "rawData": {
+        "hintFound": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001nlf7dme9ywwrr",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "mobile_viewport",
+      "severity": "info",
+      "finding": "Page declares a responsive viewport meta tag.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001olf7d3w913cfz",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "favicon",
+      "severity": "info",
+      "finding": "Page declares a favicon.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001plf7dpfmxlgjx",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "broken_image_placeholders",
+      "severity": "info",
+      "finding": "All images on this page have a resolvable src.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.8,
+      "rawData": {
+        "totalImages": 2,
+        "brokenPlaceholders": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001qlf7dn6f521an",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "visual_presentation_capture",
+      "severity": "info",
+      "finding": "A full-page screenshot was captured for visual review (this does not assess aesthetic quality automatically — see the screenshot itself).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "captured": true,
+        "screenshotPath": "/screenshots/cmr9318xw0001lf7d0xsgm9mk/home.png"
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001rlf7dn5b9sg6r",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "clarity_of_positioning",
+      "severity": "info",
+      "finding": "Positioning appears clear: this page combines 2/3 of a specific H1, a concise lead paragraph, and a real meta description.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.6,
+      "rawData": {
+        "hasSpecificH1": true,
+        "hasLeadParagraph": false,
+        "hasMetaDescription": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001slf7del81mi05",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "trust_signals",
+      "severity": "info",
+      "finding": "Brand trust signal(s) found: trustKeywords, physicalAddress, phoneNumber.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.65,
+      "rawData": {
+        "phoneNumber": true,
+        "trustImagery": false,
+        "trustKeywords": true,
+        "physicalAddress": true,
+        "authorAttribution": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001tlf7d2logvhnr",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "differentiation_language",
+      "severity": "info",
+      "finding": "Page uses differentiation-claim language (e.g. \"unique\", \"patented\", \"industry-leading\").",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.5,
+      "rawData": {
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001ulf7dymvjs7r9",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "proof_points",
+      "severity": "moderate",
+      "finding": "not detected — no quantified proof points (client counts, years in business, stats) were found on this page.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.6,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001vlf7dr9ytr83r",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "audience_specificity",
+      "severity": "info",
+      "finding": "Page language names a specific target audience or industry.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.55,
+      "rawData": {
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001wlf7dyhgyr7dg",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "sustainability_esg_signals",
+      "severity": "info",
+      "finding": "not detected — no sustainability/ESG language was found on this page (not necessarily applicable to this business).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.5,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001xlf7dtpi3ksnx",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "human_centered_design_signals",
+      "severity": "info",
+      "finding": "not detected — no human-centered/empathy-driven language was found on this page.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.45,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001ylf7d95udyv0h",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "brand_language_consistency",
+      "severity": "moderate",
+      "finding": "Brand name \"Residential Roofing Experts\" appears in only 0/1 other crawled pages' titles.",
+      "url": null,
+      "confidence": 0.6,
+      "rawData": {
+        "brandToken": "Residential Roofing Experts",
+        "pagesChecked": 1,
+        "matchingPages": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda001zlf7dn5918g18",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "contact_form_presence",
+      "severity": "info",
+      "finding": "Page includes 1 form(s).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "formCount": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0020lf7d2ikbgnt1",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "phone_email_visibility",
+      "severity": "info",
+      "finding": "Visible contact method(s): phone, email.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "hasEmail": true,
+        "hasPhone": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0021lf7dz1d1db7n",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "cta_presence",
+      "severity": "info",
+      "finding": "Page has 2 button(s)/CTA(s): Book a free inspection, Request a quote",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 1,
+      "rawData": {
+        "count": 2,
+        "samples": [
+          "Book a free inspection",
+          "Request a quote"
+        ]
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0022lf7d6382fzj0",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "cta_text_clarity",
+      "severity": "info",
+      "finding": "All 2 CTA(s) on this page use specific, descriptive text.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.75,
+      "rawData": {
+        "totalCtas": 2,
+        "vagueCtas": []
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0023lf7d6o2fz7em",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "booking_appointment_links",
+      "severity": "info",
+      "finding": "A booking/appointment link or scheduling tool was found on this page.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.7,
+      "rawData": {
+        "detected": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0024lf7dib2lygls",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "lead_magnet_presence",
+      "severity": "minor",
+      "finding": "not detected — no lead magnet (free guide/ebook/checklist/etc.) language was found on this page.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.6,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0025lf7dmm3m30kv",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "form_field_count",
+      "severity": "info",
+      "finding": "Form field counts on this page (2) are within a reasonable range.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.7,
+      "rawData": {
+        "maxFields": 2,
+        "fieldCounts": [
+          2
+        ]
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0026lf7drkwdacf1",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "form_label_coverage",
+      "severity": "major",
+      "finding": "1 of 2 form field(s) are missing a label, which can cause confusion and abandoned submissions.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.9,
+      "rawData": {
+        "total": 2,
+        "labelled": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0027lf7d05p68gbo",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "trust_elements",
+      "severity": "info",
+      "finding": "Trust element(s) were found (credential/award/testimonial keywords, client/certification logos, or author attribution).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.65,
+      "rawData": {
+        "hasAuthorSignal": false,
+        "trustImageCount": 0,
+        "hasTrustKeywords": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0028lf7dy89ykzkw",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "social_proof_near_cta",
+      "severity": "info",
+      "finding": "This page has a CTA and also shows trust/social-proof signals (page-level co-occurrence only — not confirmed to be positioned directly adjacent to the CTA).",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.5,
+      "rawData": {
+        "ctaPresent": true,
+        "trustSignalPresent": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0029lf7d7ivim1ox",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "primary_cta_above_fold",
+      "severity": "info",
+      "finding": "A primary call-to-action is visible above the fold on the homepage.",
+      "url": "http://127.0.0.1:8897/",
+      "confidence": 0.85,
+      "rawData": {
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002alf7d3wt55tg4",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "repeated_cta_patterns",
+      "severity": "minor",
+      "finding": "No consistent, repeated call-to-action text was found across the crawled pages.",
+      "url": null,
+      "confidence": 0.7,
+      "rawData": {
+        "topRepeated": [],
+        "pagesChecked": 2
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002blf7d61kpu4d8",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "conversion_path_service_to_contact",
+      "severity": "info",
+      "finding": "not applicable — no service/offering pages were found among crawled pages.",
+      "url": null,
+      "confidence": 0.5,
+      "rawData": {
+        "contactPageCount": 0,
+        "servicePageCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002clf7d9vi7fk3q",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "status_code",
+      "severity": "info",
+      "finding": "Page responded with HTTP 200.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "httpStatus": 200
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002dlf7d3itexjyt",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "indexable_pages",
+      "severity": "info",
+      "finding": "Page is indexable (successful status, no noindex directive).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "indexable": true,
+        "noindexed": false,
+        "httpStatus": 200
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002elf7dj2mm0303",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "noindex_directive",
+      "severity": "info",
+      "finding": "No noindex directive was found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "metaRobots": null,
+        "xRobotsTag": null
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002flf7d6ivn52hc",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "redirect_chain",
+      "severity": "info",
+      "finding": "Page loaded directly with no redirect.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "finalUrl": "http://127.0.0.1:8897/about",
+        "redirectChainLength": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002glf7dhp2uu55b",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "canonical_missing",
+      "severity": "moderate",
+      "finding": "No canonical tag found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "canonical": null
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002hlf7ddznolqy8",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "orphan_risk",
+      "severity": "info",
+      "finding": "1 crawled page(s) link to this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.6,
+      "rawData": {
+        "inboundCount": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002ilf7d3egz7t35",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "title_tag",
+      "severity": "info",
+      "finding": "Title tag: \"About Acme Roofing\"",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "length": 18
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002jlf7d358fprqb",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "meta_description",
+      "severity": "moderate",
+      "finding": "No meta description found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "length": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002klf7dotv5pxyz",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "missing_h1",
+      "severity": "info",
+      "finding": "Page has 1 <h1> tag(s).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "h1Count": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002llf7dida5pak8",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "on_page_seo",
+      "source": "multiple_h1",
+      "severity": "info",
+      "finding": "Page does not have multiple <h1> tags.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "h1Count": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002mlf7d8i5ptg2c",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "organization_schema",
+      "severity": "moderate",
+      "finding": "No Organization schema was found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002nlf7db233f4pb",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "local_business_schema",
+      "severity": "info",
+      "finding": "not detected — no LocalBusiness schema was found (relevance to this business could not be confirmed).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.5,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002olf7d7wpiik4m",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "breadcrumb_schema",
+      "severity": "minor",
+      "finding": "No BreadcrumbList schema was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002plf7d7anfwp92",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "faq_content",
+      "severity": "info",
+      "finding": "No FAQ-style content was detected on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.7,
+      "rawData": {
+        "hasFaqPattern": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002qlf7dwbwwg200",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "answer_like_content",
+      "severity": "moderate",
+      "finding": "No concise lead paragraph was detected near the top of the page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.6,
+      "rawData": {
+        "hasShortLeadParagraph": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002rlf7dq5q0bow5",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "trust_signals",
+      "severity": "moderate",
+      "finding": "not detected — no author, address, phone, or credential/trust keyword signals were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.6,
+      "rawData": {
+        "phone": false,
+        "author": false,
+        "address": false,
+        "credentials": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002slf7d7110vig1",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "crawlable_text_ratio",
+      "severity": "info",
+      "finding": "Page has 153 words of crawlable text.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "wordCount": 153,
+        "imageCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002tlf7d8d2fbn0n",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "ai_discoverability",
+      "source": "open_graph_tags",
+      "severity": "minor",
+      "finding": "No Open Graph title/description tags were found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "tags": [],
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002ulf7dnfi35089",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "page_load_time",
+      "severity": "info",
+      "finding": "Page took 517ms to load (navigation to network-idle).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "loadTimeMs": 517
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002vlf7dwi671hkj",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "script_weight",
+      "severity": "info",
+      "finding": "Page loads 0 external script(s).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.7,
+      "rawData": {
+        "totalScriptCount": 0,
+        "externalScriptCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002wlf7db0j2yxrw",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "response_compression",
+      "severity": "minor",
+      "finding": "Response does not appear to be compressed.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "contentEncoding": null
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002xlf7dcvulncov",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "pagespeed_analysis_mobile",
+      "severity": "info",
+      "finding": "not detected — PageSpeed Insights mobile analysis could not be completed (Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.). This is often the API's daily quota limit being reached.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.2,
+      "rawData": {
+        "error": "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.",
+        "fetched": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002ylf7debpbxchh",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "performance",
+      "source": "pagespeed_analysis_desktop",
+      "severity": "info",
+      "finding": "not detected — PageSpeed Insights desktop analysis could not be completed (Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.). This is often the API's daily quota limit being reached.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.2,
+      "rawData": {
+        "error": "Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis.com' for consumer 'project_number:583797351490'.",
+        "fetched": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda002zlf7dka8uut5u",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "image_alt_text",
+      "severity": "info",
+      "finding": "0 of 0 images on this page have alt text.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "total": 0,
+        "withAlt": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0030lf7d4ap774v5",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "html_lang_attribute",
+      "severity": "info",
+      "finding": "The <html> tag declares a lang attribute.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "lang": "en",
+        "present": true
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0031lf7d56j8kow4",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "heading_order",
+      "severity": "info",
+      "finding": "Heading levels progress without skipping (e.g. no h2 directly to h4).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.9,
+      "rawData": {
+        "skips": [],
+        "headingSequence": [
+          1
+        ]
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0032lf7dss2p6fmi",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "form_label_coverage",
+      "severity": "info",
+      "finding": "No form fields were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "total": 0,
+        "labelled": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0033lf7du74wkzk4",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "link_text_quality",
+      "severity": "info",
+      "finding": "All 0 link(s) on this page have descriptive, accessible text.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.8,
+      "rawData": {
+        "totalLinks": 0,
+        "nonDescriptiveCount": 0,
+        "sampleNonDescriptive": [],
+        "emptyAccessibleNameCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0034lf7d38gtjj11",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "axe_landmark-one-main",
+      "severity": "moderate",
+      "finding": "Automated screening found a \"landmark-one-main\" issue affecting 1 element(s) on this page (impact: moderate): Ensure the document has a main landmark This is automated accessibility screening (axe-core), not a full WCAG compliance audit — manual review by a person is still required to confirm compliance.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.9,
+      "rawData": {
+        "impact": "moderate",
+        "ruleId": "landmark-one-main",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/landmark-one-main?application=axeAPI",
+        "affectedElementCount": 1
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0035lf7d8y9e05od",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "accessibility",
+      "source": "axe_region",
+      "severity": "moderate",
+      "finding": "Automated screening found a \"region\" issue affecting 2 element(s) on this page (impact: moderate): Ensure all page content is contained by landmarks This is automated accessibility screening (axe-core), not a full WCAG compliance audit — manual review by a person is still required to confirm compliance.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.9,
+      "rawData": {
+        "impact": "moderate",
+        "ruleId": "region",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/region?application=axeAPI",
+        "affectedElementCount": 2
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0036lf7dkevdm83u",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "measurement_stack_detected",
+      "severity": "moderate",
+      "finding": "No recognizable analytics, tag-manager, or marketing pixel was detected on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.85,
+      "rawData": {
+        "detectedVendorKeys": [],
+        "detectedVendorLabels": []
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0037lf7dnlq65tf6",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "consent_mechanism",
+      "severity": "moderate",
+      "finding": "not detected — no consent management platform or cookie/consent banner was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.7,
+      "rawData": {
+        "cmpDetected": null,
+        "genericBannerDetected": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0038lf7d5sufh5mf",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "form_tracking_hints",
+      "severity": "info",
+      "finding": "not applicable — no forms were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "formCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda0039lf7d4p4dwke6",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "analytics",
+      "source": "event_tracking_hints",
+      "severity": "moderate",
+      "finding": "not detected — no visible event-tracking calls were found on this page beyond basic pageview tracking.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.55,
+      "rawData": {
+        "hintFound": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003alf7d3yra4znv",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "mobile_viewport",
+      "severity": "moderate",
+      "finding": "No responsive viewport meta tag was found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003blf7dg4zzom76",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "favicon",
+      "severity": "minor",
+      "finding": "No favicon link tag was found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003clf7dztshyv5d",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "broken_image_placeholders",
+      "severity": "info",
+      "finding": "All images on this page have a resolvable src.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.8,
+      "rawData": {
+        "totalImages": 0,
+        "brokenPlaceholders": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003dlf7d3xuwwnv5",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "visual_presentation_capture",
+      "severity": "info",
+      "finding": "A full-page screenshot was captured for visual review (this does not assess aesthetic quality automatically — see the screenshot itself).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "captured": true,
+        "screenshotPath": "/screenshots/cmr9318xw0001lf7d0xsgm9mk/about.png"
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003elf7d6nj0wn95",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "clarity_of_positioning",
+      "severity": "moderate",
+      "finding": "Positioning clarity could not be confirmed: only 1/3 of a specific H1, a concise lead paragraph, and a real meta description were found.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.6,
+      "rawData": {
+        "hasSpecificH1": true,
+        "hasLeadParagraph": false,
+        "hasMetaDescription": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003flf7d1ii2d5ik",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "trust_signals",
+      "severity": "moderate",
+      "finding": "not detected — no credential keywords, author attribution, address, phone, or trust imagery was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.65,
+      "rawData": {
+        "phoneNumber": false,
+        "trustImagery": false,
+        "trustKeywords": false,
+        "physicalAddress": false,
+        "authorAttribution": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003glf7d55t8wazz",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "differentiation_language",
+      "severity": "minor",
+      "finding": "not detected — no differentiation-claim language was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.5,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003hlf7dp3irtfl4",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "proof_points",
+      "severity": "moderate",
+      "finding": "not detected — no quantified proof points (client counts, years in business, stats) were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.6,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003ilf7dnqu05c1k",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "audience_specificity",
+      "severity": "moderate",
+      "finding": "not detected — no language naming a specific target audience or industry was found on this page (may read as generic).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.55,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003jlf7dmdketrph",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "sustainability_esg_signals",
+      "severity": "info",
+      "finding": "not detected — no sustainability/ESG language was found on this page (not necessarily applicable to this business).",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.5,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003klf7ducqpkydr",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "brand_experience",
+      "source": "human_centered_design_signals",
+      "severity": "info",
+      "finding": "not detected — no human-centered/empathy-driven language was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.45,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003llf7d9ifkjqcx",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "contact_form_presence",
+      "severity": "minor",
+      "finding": "No form was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "formCount": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003mlf7drrqkpc2h",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "phone_email_visibility",
+      "severity": "minor",
+      "finding": "No visible phone (tel:) or email (mailto:) link was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "hasEmail": false,
+        "hasPhone": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003nlf7d0l8e4b61",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "cta_presence",
+      "severity": "minor",
+      "finding": "No buttons or call-to-action elements were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "count": 0,
+        "samples": []
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003olf7dvxv0uncl",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "cta_text_clarity",
+      "severity": "info",
+      "finding": "not applicable — no buttons/CTAs were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "totalCtas": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003plf7dcfdmrh8f",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "booking_appointment_links",
+      "severity": "minor",
+      "finding": "not detected — no booking/appointment/scheduling link was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.7,
+      "rawData": {
+        "detected": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003qlf7da49ra8j7",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "lead_magnet_presence",
+      "severity": "minor",
+      "finding": "not detected — no lead magnet (free guide/ebook/checklist/etc.) language was found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.6,
+      "rawData": {
+        "present": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003rlf7db2ipegtv",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "form_field_count",
+      "severity": "info",
+      "finding": "not applicable — no forms were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "fieldCounts": []
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003slf7dp7zq0trd",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "form_label_coverage",
+      "severity": "info",
+      "finding": "No form fields were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 1,
+      "rawData": {
+        "total": 0,
+        "labelled": 0
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003tlf7dd012g5kb",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "trust_elements",
+      "severity": "moderate",
+      "finding": "not detected — no case studies, testimonials, logos, awards, or certification signals were found on this page.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.65,
+      "rawData": {
+        "hasAuthorSignal": false,
+        "trustImageCount": 0,
+        "hasTrustKeywords": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003ulf7d3qivsigt",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "conversion",
+      "source": "social_proof_near_cta",
+      "severity": "info",
+      "finding": "not applicable — no CTA was found on this page to check for accompanying social proof.",
+      "url": "http://127.0.0.1:8897/about",
+      "confidence": 0.3,
+      "rawData": {
+        "ctaPresent": false
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003vlf7dtovc0me4",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "page_reachable",
+      "severity": "critical",
+      "finding": "Page could not be crawled successfully (error).",
+      "url": "http://127.0.0.1:8897/contact",
+      "confidence": 1,
+      "rawData": {
+        "httpStatus": 404,
+        "crawlStatus": "error"
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    },
+    {
+      "id": "cmr931eda003wlf7devaq3c6g",
+      "scanId": "cmr9318xw0001lf7d0xsgm9mk",
+      "category": "technical_seo",
+      "source": "page_reachable",
+      "severity": "critical",
+      "finding": "Page could not be crawled successfully (error).",
+      "url": "http://127.0.0.1:8897/privacy",
+      "confidence": 1,
+      "rawData": {
+        "httpStatus": 404,
+        "crawlStatus": "error"
+      },
+      "createdAt": "2026-07-06T10:33:52.893Z"
+    }
+  ]
+}
