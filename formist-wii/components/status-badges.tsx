@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { CategoryStatus, Severity } from "@/generated/prisma/enums";
 
 export function RunStatusBadge({ status }: { status: string }) {
   const variant =
@@ -33,6 +34,50 @@ export function RiskBadge({ risk }: { risk: string }) {
   return (
     <Badge variant={variant} className="capitalize">
       {risk}
+    </Badge>
+  );
+}
+
+const CATEGORY_STATUS_LABEL: Record<CategoryStatus, string> = {
+  good: "Strong",
+  needs_attention: "Fair",
+  poor: "Needs Improvement",
+  critical: "Critical",
+};
+
+const CATEGORY_STATUS_VARIANT: Record<CategoryStatus, "success" | "warning" | "destructive"> = {
+  good: "success",
+  needs_attention: "warning",
+  poor: "destructive",
+  critical: "destructive",
+};
+
+export function CategoryStatusBadge({
+  status,
+  className,
+}: {
+  status: CategoryStatus;
+  className?: string;
+}) {
+  return (
+    <Badge variant={CATEGORY_STATUS_VARIANT[status]} className={className}>
+      {CATEGORY_STATUS_LABEL[status]}
+    </Badge>
+  );
+}
+
+const SEVERITY_VARIANT: Record<Severity, "success" | "warning" | "destructive" | "secondary"> = {
+  info: "secondary",
+  minor: "secondary",
+  moderate: "warning",
+  major: "destructive",
+  critical: "destructive",
+};
+
+export function SeverityBadge({ severity, className }: { severity: Severity; className?: string }) {
+  return (
+    <Badge variant={SEVERITY_VARIANT[severity]} className={cn("capitalize", className)}>
+      {severity}
     </Badge>
   );
 }

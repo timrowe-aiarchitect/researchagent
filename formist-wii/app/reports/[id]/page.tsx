@@ -14,26 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GradeBadge, RiskBadge } from "@/components/status-badges";
+import { GradeBadge, RiskBadge, CategoryStatusBadge, SeverityBadge } from "@/components/status-badges";
 import { ExportPdfButton } from "@/components/export-pdf-button";
-import type { CategoryStatus, Severity } from "@/generated/prisma/enums";
+import { ReportSubNav } from "@/components/report-sub-nav";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_VARIANT: Record<CategoryStatus, "success" | "warning" | "destructive"> = {
-  good: "success",
-  needs_attention: "warning",
-  poor: "destructive",
-  critical: "destructive",
-};
-
-const SEVERITY_VARIANT: Record<Severity, "success" | "warning" | "destructive" | "secondary"> = {
-  info: "secondary",
-  minor: "secondary",
-  moderate: "warning",
-  major: "destructive",
-  critical: "destructive",
-};
 
 export default async function ReportPage({
   params,
@@ -48,6 +33,8 @@ export default async function ReportPage({
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 print:max-w-none print:px-0">
+      <ReportSubNav reportId={id} active="report" />
+
       {/* 1. Cover */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -197,9 +184,7 @@ export default async function ReportPage({
                   <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground text-xs">{f.categoryLabel}</span>
-                      <Badge variant={SEVERITY_VARIANT[f.severity]} className="capitalize">
-                        {f.severity}
-                      </Badge>
+                      <SeverityBadge severity={f.severity} />
                     </div>
                     <p>{f.finding}</p>
                     {f.url && <p className="text-muted-foreground truncate text-xs">{f.url}</p>}
@@ -225,9 +210,7 @@ export default async function ReportPage({
                 <CardTitle className="flex items-center justify-between text-base">
                   <span>{cs.label}</span>
                   <div className="flex items-center gap-2">
-                    <Badge variant={STATUS_VARIANT[cs.status]} className="capitalize">
-                      {cs.status.replace(/_/g, " ")}
-                    </Badge>
+                    <CategoryStatusBadge status={cs.status} />
                     <span className="text-muted-foreground text-sm font-normal">
                       {cs.score}/{cs.maxScore}
                     </span>
@@ -243,9 +226,7 @@ export default async function ReportPage({
                       <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
-                          <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
-                            {e.severity}
-                          </Badge>
+                          <SeverityBadge severity={e.severity} />
                         </div>
                         <p className="text-muted-foreground">{e.finding}</p>
                         {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
@@ -267,9 +248,7 @@ export default async function ReportPage({
             <CardTitle className="flex items-center justify-between text-base">
               <span>AI Discoverability</span>
               <div className="flex items-center gap-2">
-                <Badge variant={STATUS_VARIANT[data.aiDiscoverabilityAssessment.status]} className="capitalize">
-                  {data.aiDiscoverabilityAssessment.status.replace(/_/g, " ")}
-                </Badge>
+                <CategoryStatusBadge status={data.aiDiscoverabilityAssessment.status} />
                 <span className="text-muted-foreground text-sm font-normal">
                   {data.aiDiscoverabilityAssessment.score}/{data.aiDiscoverabilityAssessment.maxScore}
                 </span>
@@ -298,9 +277,7 @@ export default async function ReportPage({
                   <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
-                      <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
-                        {e.severity}
-                      </Badge>
+                      <SeverityBadge severity={e.severity} />
                     </div>
                     <p className="text-muted-foreground">{e.finding}</p>
                     {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
@@ -321,12 +298,7 @@ export default async function ReportPage({
               <CardTitle className="flex items-center justify-between text-base">
                 <span>WordPress Maintainability</span>
                 <div className="flex items-center gap-2">
-                  <Badge
-                    variant={STATUS_VARIANT[data.wordpressMaintainabilityAssessment.status]}
-                    className="capitalize"
-                  >
-                    {data.wordpressMaintainabilityAssessment.status.replace(/_/g, " ")}
-                  </Badge>
+                  <CategoryStatusBadge status={data.wordpressMaintainabilityAssessment.status} />
                   <span className="text-muted-foreground text-sm font-normal">
                     {data.wordpressMaintainabilityAssessment.score}/
                     {data.wordpressMaintainabilityAssessment.maxScore}
@@ -350,9 +322,7 @@ export default async function ReportPage({
                     <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
-                        <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
-                          {e.severity}
-                        </Badge>
+                        <SeverityBadge severity={e.severity} />
                       </div>
                       <p className="text-muted-foreground">{e.finding}</p>
                       {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
@@ -471,9 +441,7 @@ export default async function ReportPage({
                     <li key={i} className="flex flex-col gap-1 rounded-md border p-3 text-sm">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium capitalize">{e.source.replace(/_/g, " ")}</span>
-                        <Badge variant={SEVERITY_VARIANT[e.severity]} className="capitalize">
-                          {e.severity}
-                        </Badge>
+                        <SeverityBadge severity={e.severity} />
                       </div>
                       <p className="text-muted-foreground">{e.finding}</p>
                       {e.url && <p className="text-muted-foreground truncate text-xs">{e.url}</p>}
