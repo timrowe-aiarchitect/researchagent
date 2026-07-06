@@ -44,6 +44,19 @@ const KEYWORD_PATTERNS: RegExp[] = [
   /blog/i,
 ];
 
+/**
+ * Chromium doesn't read HTTPS_PROXY the way Node's fetch() can — it needs its own explicit proxy
+ * option (see chromium.launch()'s `proxy` field). Bypasses whatever NO_PROXY already lists (plus
+ * localhost/127.0.0.1 as a safe default) so locally-run mock HTTP servers in tests still connect
+ * directly rather than through the proxy.
+ */
+function getPlaywrightProxyConfig(): { server: string; bypass?: string } | undefined {
+  const server = process.env.HTTPS_PROXY || process.env.https_proxy;
+  if (!server) return undefined;
+  const bypass = process.env.NO_PROXY || process.env.no_proxy || "localhost,127.0.0.1";
+  return { server, bypass };
+}
+
 export function normalizeDomain(rawUrl: string): string {
   const parsed = new URL(rawUrl);
   return `${parsed.origin}/`;
@@ -1069,6 +1082,7 @@ export async function crawlWebsite({
 
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
+    proxy: getPlaywrightProxyConfig(),
   });
 
   try {

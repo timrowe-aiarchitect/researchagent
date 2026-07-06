@@ -10,6 +10,7 @@
     "test": "vitest run",
     "postinstall": "prisma generate",
     "worker": "tsx watch worker/scan-worker.ts",
+    "scan": "NODE_OPTIONS=--use-env-proxy tsx scripts/scan.ts",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio"
   },
