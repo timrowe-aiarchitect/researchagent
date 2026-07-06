@@ -5,6 +5,7 @@ import {
   computeCategoryRatio,
   computeOverallScore,
   computeScanScore,
+  computeScanScoreFromCategoryScores,
   derivePriority,
   deriveAiReadiness,
   deriveBusinessRisk,
@@ -292,5 +293,67 @@ describe("computeScanScore (integration)", () => {
     expect(analytics.score).toBeCloseTo(analytics.maxScore * 0.5, 5);
     expect(analytics.confidence).toBe(0.3);
     expect(analytics.evidenceRefs).toEqual([]);
+  });
+});
+
+describe("computeScanScoreFromCategoryScores", () => {
+  const pages = [{ crawlStatus: "success" as const }, { crawlStatus: "success" as const }];
+
+  it("matches computeScanScore's own output when fed that same result's category scores back in", () => {
+    const evidence: { id: string; category: EvidenceCategory; severity: Severity; confidence: number }[] = [
+      { id: "1", category: "technical_seo", severity: "info", confidence: 1 },
+      { id: "2", category: "security", severity: "critical", confidence: 1 },
+    ];
+
+    const original = computeScanScore({ evidence, pages, scanMeta: { pagesRequested: 2, isWordPress: true } });
+    const recomputed = computeScanScoreFromCategoryScores({
+      categoryScores: original.categoryScores.map((cs) => ({
+        category: cs.category,
+        score: cs.score,
+        maxScore: cs.maxScore,
+      })),
+      evidence,
+    });
+
+    expect(recomputed.overallScore).toBe(original.overallScore);
+    expect(recomputed.grade).toBe(original.grade);
+    expect(recomputed.businessRisk).toBe(original.businessRisk);
+    expect(recomputed.aiReadiness).toEqual(original.aiReadiness);
+    expect(recomputed.priority).toBe(original.priority);
+  });
+
+  it("moves the overall score when a category score changes, as a reviewer override would", () => {
+    const categoryScores = (Object.keys(CATEGORY_MAX_POINTS) as EvidenceCategory[]).map((category) => ({
+      category,
+      score: CATEGORY_MAX_POINTS[category], // every category maxed out
+      maxScore: CATEGORY_MAX_POINTS[category],
+    }));
+
+    const before = computeScanScoreFromCategoryScores({ categoryScores, evidence: [] });
+    expect(before.overallScore).toBe(100);
+    expect(before.grade).toBe("A");
+
+    const overridden = categoryScores.map((cs) =>
+      cs.category === "technical_seo" ? { ...cs, score: 0 } : cs
+    );
+    const after = computeScanScoreFromCategoryScores({ categoryScores: overridden, evidence: [] });
+    expect(after.overallScore).toBe(100 - CATEGORY_MAX_POINTS.technical_seo);
+  });
+
+  it("still reflects a raw critical finding's business-risk signal even if the category's score was overridden upward", () => {
+    // A reviewer bumping the security category's score up can't erase the fact that a critical
+    // security finding was actually found — deriveBusinessRisk's evidence-severity check stays.
+    const categoryScores = (Object.keys(CATEGORY_MAX_POINTS) as EvidenceCategory[]).map((category) => ({
+      category,
+      score: CATEGORY_MAX_POINTS[category],
+      maxScore: CATEGORY_MAX_POINTS[category],
+    }));
+    const evidence: { category: EvidenceCategory; severity: Severity }[] = [
+      { category: "security", severity: "critical" },
+    ];
+
+    const result = computeScanScoreFromCategoryScores({ categoryScores, evidence });
+
+    expect(result.businessRisk).toBe("critical");
   });
 });

@@ -354,3 +354,44 @@ export function computeScanScore(input: {
 
   return { categoryScores, overallScore, grade, businessRisk, aiReadiness, priority };
 }
+
+export type EffectiveCategoryScoreInput = {
+  category: EvidenceCategory;
+  score: number;
+  maxScore: number;
+};
+
+export type RecomputedScanScore = {
+  overallScore: number;
+  grade: Grade;
+  businessRisk: BusinessRisk;
+  aiReadiness: { score: number; label: ReadinessLabel };
+  priority: Priority;
+};
+
+/**
+ * Recomputes overall score/grade/businessRisk/aiReadiness/priority from a set of already-scored
+ * categories (score/maxScore pairs) rather than raw evidence. Used by the human review workflow
+ * (lib/report-review.ts) to re-derive these whenever a reviewer overrides one or more category
+ * scores — categoryScores here should be the EFFECTIVE (overrideScore ?? automated score) values.
+ * evidence stays the raw, unedited findings: deriveBusinessRisk's evidence-severity signal can't
+ * be suppressed by a score override, only its ratio-based signal moves — a reviewer adjusting a
+ * category's score up can't erase a real critical finding from the business-risk calculation.
+ */
+export function computeScanScoreFromCategoryScores(input: {
+  categoryScores: EffectiveCategoryScoreInput[];
+  evidence: { category: EvidenceCategory; severity: Severity }[];
+}): RecomputedScanScore {
+  const categoryRatios: Partial<Record<EvidenceCategory, number>> = {};
+  for (const cs of input.categoryScores) {
+    categoryRatios[cs.category] = cs.maxScore > 0 ? cs.score / cs.maxScore : 0;
+  }
+
+  const overallScore = computeOverallScore(input.categoryScores);
+  const grade = gradeFromScore(overallScore);
+  const businessRisk = deriveBusinessRisk(input.evidence, categoryRatios);
+  const aiReadiness = deriveAiReadiness(categoryRatios);
+  const priority = derivePriority(overallScore, businessRisk);
+
+  return { overallScore, grade, businessRisk, aiReadiness, priority };
+}

@@ -274,6 +274,7 @@ async function scoreAndFinalize(
     priority,
     qualitativeAssessment,
     narrative,
+    reviewStatus: "draft",
   });
 
   const html = buildReportHtml(reportData);

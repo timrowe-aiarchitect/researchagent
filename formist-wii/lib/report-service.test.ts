@@ -98,6 +98,7 @@ function baseInput(overrides: Partial<ReportInput> = {}): ReportInput {
     priority: "medium",
     qualitativeAssessment,
     narrative: null,
+    reviewStatus: "draft",
     ...overrides,
   };
 }
@@ -116,7 +117,10 @@ describe("buildReportData", () => {
     const data = buildReportData(baseInput());
 
     expect(data.cover.rootUrl).toBe("https://example.com");
-    expect(data.cover.overallScore).toBe(62);
+    // Final overallScore is re-derived from the effective category scores (here, just the single
+    // technical_seo category at 6/12) — automatedOverallScore is the untouched scan-time snapshot.
+    expect(data.cover.overallScore).toBe(6);
+    expect(data.cover.automatedOverallScore).toBe(62);
     expect(data.executiveSummary).toContain("https://example.com");
     expect(data.executiveScorecard.businessRisk).toBe("medium");
     expect(data.overallIndex.categoryBreakdown).toHaveLength(1);

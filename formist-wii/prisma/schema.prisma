@@ -60,6 +60,13 @@ enum CategoryStatus {
   critical
 }
 
+enum ReportStatus {
+  draft
+  needs_review
+  approved
+  exported
+}
+
 model Client {
   id             String      @id @default(cuid())
   name           String?
@@ -154,6 +161,9 @@ model CategoryScore {
   scanId       String           @map("scan_id")
   scan         Scan             @relation(fields: [scanId], references: [id], onDelete: Cascade)
   category     EvidenceCategory
+  // Automated fields — written once by the scoring engine (lib/scoring.ts) and never mutated
+  // afterward. The human review workflow (lib/report-review.ts) only ever writes the override_*
+  // columns below, so the automated result is always recoverable even after a reviewer edits it.
   score        Float
   maxScore     Float            @default(100) @map("max_score")
   status       CategoryStatus
@@ -161,6 +171,19 @@ model CategoryScore {
   confidence   Float            @default(1)
   evidenceRefs Json             @map("evidence_refs")
   createdAt    DateTime         @default(now()) @map("created_at")
+
+  /// Reviewer-supplied score override (see PATCH /api/reports/[id]/categories/[category]).
+  /// Effective/displayed score is overrideScore ?? score; status is re-derived from that ratio,
+  /// never independently overridden. Null when this category hasn't been reviewed/overridden.
+  overrideScore     Float?    @map("override_score")
+  /// Reviewer-edited rationale text. Independent of overrideScore — a reviewer may reword the
+  /// rationale without changing the score, or vice versa.
+  overrideRationale String?   @map("override_rationale")
+  /// Required whenever overrideScore is set to a new (non-null) value; optional when only the
+  /// rationale is edited or when clearing an existing override back to the automated score.
+  overrideNote      String?   @map("override_note")
+  overriddenBy      String?   @map("overridden_by")
+  overriddenAt      DateTime? @map("overridden_at")
 
   @@unique([scanId, category])
   @@map("category_scores")
@@ -196,6 +219,13 @@ model Report {
   html                   String
   pdfUrl                 String?  @map("pdf_url")
   generatedAt            DateTime @default(now()) @map("generated_at")
+
+  /// Human review workflow (see lib/report-review.ts). A report starts as draft the moment the
+  /// scan completes; reviewedBy/reviewedAt track whoever last changed the status (no auth system
+  /// exists yet, so this is free text like Scan.requestedBy).
+  status     ReportStatus @default(draft)
+  reviewedBy String?      @map("reviewed_by")
+  reviewedAt DateTime?    @map("reviewed_at")
 
   @@map("reports")
 }

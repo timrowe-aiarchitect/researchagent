@@ -23,6 +23,9 @@ export async function getReportPayload(id: string) {
     id: report.id,
     scanId: report.scanId,
     pdfUrl: report.pdfUrl,
+    status: report.status,
+    reviewedBy: report.reviewedBy,
+    reviewedAt: report.reviewedAt,
     data: report.fullReport as unknown as ReportData,
   };
 }

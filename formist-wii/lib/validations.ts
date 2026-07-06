@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EvidenceCategory, ReportStatus } from "@/generated/prisma/enums";
 
 const PRIVATE_HOSTNAMES = new Set(["localhost", "0.0.0.0", "::1"]);
 
@@ -76,4 +77,30 @@ export const getScanParamsSchema = z.object({
 
 export const getReportParamsSchema = z.object({
   id: z.string().min(1),
+});
+
+const EVIDENCE_CATEGORIES = Object.values(EvidenceCategory) as [EvidenceCategory, ...EvidenceCategory[]];
+const REPORT_STATUSES = Object.values(ReportStatus) as [ReportStatus, ...ReportStatus[]];
+
+export const categoryReviewParamsSchema = z.object({
+  id: z.string().min(1),
+  category: z.enum(EVIDENCE_CATEGORIES),
+});
+
+export const categoryReviewBodySchema = z.object({
+  rationale: z.string().trim().min(1, "Rationale is required").max(4000),
+  score: z.number().finite(),
+  // Required whenever the submitted score differs from the automated one — enforced again in
+  // lib/report-review.ts, which is the actual source of truth for that rule.
+  note: z.string().trim().max(2000).nullable().optional(),
+  reviewerName: z.string().trim().min(1).max(200).default("internal"),
+});
+
+export const reportStatusParamsSchema = z.object({
+  id: z.string().min(1),
+});
+
+export const reportStatusBodySchema = z.object({
+  status: z.enum(REPORT_STATUSES),
+  reviewerName: z.string().trim().min(1).max(200).default("internal"),
 });

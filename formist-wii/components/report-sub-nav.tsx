@@ -6,6 +6,7 @@ const TABS = [
   { key: "report", label: "Report", href: (id: string) => `/reports/${id}` },
   { key: "scorecard", label: "Scorecard", href: (id: string) => `/reports/${id}/scorecard` },
   { key: "evidence", label: "Evidence", href: (id: string) => `/reports/${id}/evidence` },
+  { key: "review", label: "Review", href: (id: string) => `/reports/${id}/review` },
 ] as const;
 
 export function ReportSubNav({

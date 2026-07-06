@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { GradeBadge, RiskBadge, CategoryStatusBadge } from "@/components/status-badges";
+import { GradeBadge, RiskBadge, CategoryStatusBadge, ReportStatusBadge } from "@/components/status-badges";
 import { ExportPdfButton } from "@/components/export-pdf-button";
 import { ReportSubNav } from "@/components/report-sub-nav";
 
@@ -28,7 +28,10 @@ export default async function ScorecardPage({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-muted-foreground text-sm font-medium">Scorecard</p>
+          <div className="flex items-center gap-2">
+            <p className="text-muted-foreground text-sm font-medium">Scorecard</p>
+            <ReportStatusBadge status={report.status} />
+          </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight break-all">
             {data.cover.clientName ?? data.cover.rootUrl}
           </h1>
@@ -45,6 +48,11 @@ export default async function ScorecardPage({
             </div>
             <GradeBadge grade={data.overallIndex.grade} />
             <span className="text-muted-foreground text-xs">Overall WII score</span>
+            {data.overallIndex.overallScore !== data.overallIndex.automatedOverallScore && (
+              <span className="text-muted-foreground text-xs">
+                Automated: {data.overallIndex.automatedOverallScore} (Grade {data.overallIndex.automatedGrade})
+              </span>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -83,7 +91,14 @@ export default async function ScorecardPage({
               <div key={c.category}>
                 {i > 0 && <Separator className="mb-5" />}
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-medium">{c.label}</span>
+                  <span className="flex items-center gap-2 font-medium">
+                    {c.label}
+                    {c.isOverridden && (
+                      <Badge variant="secondary" className="font-normal">
+                        Reviewed
+                      </Badge>
+                    )}
+                  </span>
                   <div className="flex items-center gap-3">
                     <CategoryStatusBadge status={c.status} />
                     <span className="text-muted-foreground w-14 text-right text-sm">
@@ -91,6 +106,11 @@ export default async function ScorecardPage({
                     </span>
                   </div>
                 </div>
+                {c.isOverridden && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Automated: {c.automatedScore}/{c.maxScore}
+                  </p>
+                )}
                 <Progress value={(c.score / c.maxScore) * 100} className="mt-2" />
               </div>
             ))}

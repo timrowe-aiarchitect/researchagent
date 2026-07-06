@@ -4,6 +4,8 @@ import { chromium } from "playwright";
 import {
   CATEGORY_LABELS,
   RISK_CATEGORIES,
+  computeScanScoreFromCategoryScores,
+  statusFromRatio,
   type BusinessRisk,
   type Grade,
   type Priority,
@@ -16,6 +18,7 @@ import type {
   CrawlStatus,
   DetectedCms,
   EvidenceCategory,
+  ReportStatus,
   Severity,
 } from "@/generated/prisma/enums";
 
@@ -24,12 +27,21 @@ const PDF_RENDER_TIMEOUT_MS = 30000;
 /**
  * The Website Intelligence Index report generation service.
  *
- * buildReportData() is a pure function: scan metadata + category scores + evidence + recommendations
- * + screenshots + the already-computed overall score/grade/businessRisk/aiReadiness/priority in,
- * a single structured ReportData object out (the 11 sections below, in order). It performs no
- * scoring itself — all scores are computed by lib/scoring.ts and passed in — this module is only
- * responsible for organizing that data into report form and writing it in Formist's voice
- * (strategic, direct, evidence-based, human-centered, focused on business value, no hype).
+ * buildReportData() is a pure function: scan metadata + category scores (each carrying both its
+ * automated result and any human reviewer override, see lib/report-review.ts) + evidence +
+ * recommendations + screenshots + the automated overall score/grade/businessRisk/aiReadiness/
+ * priority in, a single structured ReportData object out (the 11 sections below, in order). It
+ * re-derives the overall (final) score/grade/businessRisk/aiReadiness/priority from the effective
+ * (override ?? automated) category scores via lib/scoring.ts's computeScanScoreFromCategoryScores
+ * — the same deterministic formula computeScanScore uses, just re-applied to stored scores instead
+ * of raw evidence — so this module still invents no scoring logic of its own; it only organizes
+ * already-computed numbers into report form and writes prose in Formist's voice (strategic,
+ * direct, evidence-based, human-centered, focused on business value, no hype).
+ *
+ * Every score-bearing field in ReportData exposes both its automated value (frozen at scan
+ * completion, never mutated) and its effective/final value (automated, unless a reviewer overrode
+ * it) — see PRD's human review workflow. Existing callers that only care about "the" score/status/
+ * rationale keep reading the same field names as before; those now mean "final."
  *
  * lib/report-html.ts renders ReportData to a self-contained HTML document; generateReportPdf()
  * below renders that HTML to a PDF file via Playwright.
@@ -42,7 +54,7 @@ const SEVERITY_RANK: Record<Severity, number> = { info: 0, minor: 1, moderate: 2
 
 // AI discoverability and WordPress maintainability get their own dedicated sections (7 and 8), so
 // they're excluded from the generic category deep dives (6) to avoid showing the same category twice.
-const DEDICATED_SECTION_CATEGORIES: EvidenceCategory[] = ["ai_discoverability", "wordpress_maintainability"];
+export const DEDICATED_SECTION_CATEGORIES: EvidenceCategory[] = ["ai_discoverability", "wordpress_maintainability"];
 
 export type ReportEvidenceInput = {
   id: string;
@@ -56,12 +68,19 @@ export type ReportEvidenceInput = {
 
 export type ReportCategoryScoreInput = {
   category: EvidenceCategory;
+  // Automated fields — the scoring engine's original result, frozen at scan completion.
   score: number;
   maxScore: number;
   status: CategoryStatus;
   rationale: string;
   confidence: number;
   evidenceRefs: string[];
+  // Human reviewer override (lib/report-review.ts) — all null/undefined until a reviewer acts.
+  overrideScore?: number | null;
+  overrideRationale?: string | null;
+  overrideNote?: string | null;
+  overriddenBy?: string | null;
+  overriddenAt?: Date | null;
 };
 
 export type ReportRecommendationInput = {
@@ -101,6 +120,7 @@ export type ReportInput = {
   priority: Priority;
   qualitativeAssessment: QualitativeAssessment | null;
   narrative: NarrativeReport | null;
+  reviewStatus: ReportStatus;
 };
 
 export type ReportEvidenceItem = {
@@ -114,15 +134,26 @@ export type ReportEvidenceItem = {
 export type ReportCategorySummary = {
   category: EvidenceCategory;
   label: string;
-  score: number;
   maxScore: number;
-  status: CategoryStatus;
-  rationale: string;
   confidence: number;
   evidence: ReportEvidenceItem[];
+  // Final/effective — automated, unless a reviewer overrode this category.
+  score: number;
+  status: CategoryStatus;
+  rationale: string;
+  // Automated — the scoring engine's original result, frozen at scan completion.
+  automatedScore: number;
+  automatedStatus: CategoryStatus;
+  automatedRationale: string;
+  // Review metadata
+  isOverridden: boolean;
+  overrideNote: string | null;
+  overriddenBy: string | null;
+  overriddenAt: string | null;
 };
 
 export type ReportData = {
+  reviewStatus: ReportStatus;
   cover: {
     rootUrl: string;
     clientName: string | null;
@@ -130,8 +161,12 @@ export type ReportData = {
     generatedAt: string;
     pagesCrawled: number;
     pagesRequested: number;
+    // Final/effective — automated, unless a reviewer overrode one or more category scores.
     overallScore: number;
     grade: Grade;
+    // Automated — the scoring engine's original result, frozen at scan completion.
+    automatedOverallScore: number;
+    automatedGrade: Grade;
   };
   executiveSummary: string;
   topRisks: string[];
@@ -139,6 +174,8 @@ export type ReportData = {
   executiveScorecard: {
     overallScore: number;
     grade: Grade;
+    automatedOverallScore: number;
+    automatedGrade: Grade;
     businessRisk: BusinessRisk;
     businessRiskDrivers: string[];
     aiReadiness: { score: number; label: ReadinessLabel };
@@ -148,12 +185,17 @@ export type ReportData = {
   overallIndex: {
     overallScore: number;
     grade: Grade;
+    automatedOverallScore: number;
+    automatedGrade: Grade;
     categoryBreakdown: {
       category: EvidenceCategory;
       label: string;
       score: number;
       maxScore: number;
       status: CategoryStatus;
+      automatedScore: number;
+      automatedStatus: CategoryStatus;
+      isOverridden: boolean;
     }[];
   };
   keyFindings: {
@@ -164,25 +206,11 @@ export type ReportData = {
     url: string | null;
   }[];
   categoryDeepDives: ReportCategorySummary[];
-  aiDiscoverabilityAssessment: {
-    score: number;
-    maxScore: number;
-    status: CategoryStatus;
-    rationale: string;
-    confidence: number;
-    evidence: ReportEvidenceItem[];
+  aiDiscoverabilityAssessment: Omit<ReportCategorySummary, "category" | "label"> & {
     strategistPerspective: QualitativeAssessment["aiDiscoverability"] | null;
   };
   wordpressMaintainabilityAssessment:
-    | {
-        applicable: true;
-        score: number;
-        maxScore: number;
-        status: CategoryStatus;
-        rationale: string;
-        confidence: number;
-        evidence: ReportEvidenceItem[];
-      }
+    | (Omit<ReportCategorySummary, "category" | "label"> & { applicable: true })
     | { applicable: false; note: string };
   priorityRoadmapNarrative: string;
   priorityRoadmap: {
@@ -207,6 +235,25 @@ function toEvidenceItem(e: ReportEvidenceInput): ReportEvidenceItem {
   return { source: e.source, severity: e.severity, finding: e.finding, url: e.url, confidence: e.confidence };
 }
 
+/**
+ * The effective (override ?? automated) score and status for a category. When there's no
+ * override, this returns the automated score/status exactly as stored — it never second-guesses
+ * the scoring engine by re-deriving status from score/maxScore, since that reconstruction can
+ * differ from the original unrounded ratio the engine actually used (see computeScanScore).
+ * Status is only re-derived (via statusFromRatio) when a reviewer has overridden the score.
+ */
+export function effectiveCategoryValues(cs: ReportCategoryScoreInput): { score: number; status: CategoryStatus } {
+  if (cs.overrideScore == null) {
+    return { score: cs.score, status: cs.status };
+  }
+  const status = cs.maxScore > 0 ? statusFromRatio(cs.overrideScore / cs.maxScore) : cs.status;
+  return { score: cs.overrideScore, status };
+}
+
+export function isCategoryOverridden(cs: ReportCategoryScoreInput): boolean {
+  return cs.overrideScore != null || Boolean(cs.overrideRationale);
+}
+
 function buildCategorySummary(
   cs: ReportCategoryScoreInput,
   evidenceById: Map<string, ReportEvidenceInput>,
@@ -216,19 +263,30 @@ function buildCategorySummary(
     .map((id) => evidenceById.get(id))
     .filter((e): e is ReportEvidenceInput => Boolean(e))
     .map(toEvidenceItem);
+  const { score, status } = effectiveCategoryValues(cs);
   return {
     category: cs.category,
     label: CATEGORY_LABELS[cs.category],
-    score: cs.score,
     maxScore: cs.maxScore,
-    status: cs.status,
-    rationale: narrativeSummaries.get(cs.category) ?? cs.rationale,
     confidence: cs.confidence,
     evidence,
+    score,
+    status,
+    rationale: cs.overrideRationale ?? narrativeSummaries.get(cs.category) ?? cs.rationale,
+    automatedScore: cs.score,
+    automatedStatus: cs.status,
+    automatedRationale: cs.rationale,
+    isOverridden: isCategoryOverridden(cs),
+    overrideNote: cs.overrideNote ?? null,
+    overriddenBy: cs.overriddenBy ?? null,
+    overriddenAt: cs.overriddenAt ? cs.overriddenAt.toISOString() : null,
   };
 }
 
-function buildExecutiveSummary(input: ReportInput): string {
+function buildExecutiveSummary(
+  input: ReportInput,
+  final: { overallScore: number; grade: Grade; businessRisk: BusinessRisk; aiReadiness: { label: ReadinessLabel } }
+): string {
   const { rootUrl } = input.scan;
   const riskSentence: Record<BusinessRisk, string> = {
     critical: "several critical issues require immediate attention",
@@ -237,10 +295,10 @@ function buildExecutiveSummary(input: ReportInput): string {
     low: "the site is in solid working order with only minor gaps",
   };
   return (
-    `${rootUrl} scores ${input.overallScore}/100 (Grade ${input.grade}) on the Website Intelligence Index. ` +
-    `Overall, ${riskSentence[input.businessRisk]}. ` +
+    `${rootUrl} scores ${final.overallScore}/100 (Grade ${final.grade}) on the Website Intelligence Index. ` +
+    `Overall, ${riskSentence[final.businessRisk]}. ` +
     `AI discoverability — how easily AI assistants and answer engines can find and represent this business — ` +
-    `stands at ${input.aiReadiness.label.toLowerCase()}. ` +
+    `stands at ${final.aiReadiness.label.toLowerCase()}. ` +
     `The findings below are organized by category, with every score traced to specific evidence, ` +
     `and a priority roadmap sequencing the highest-value next steps.`
   );
@@ -252,9 +310,12 @@ function buildExecutiveSummary(input: ReportInput): string {
 function buildFallbackTopOpportunities(categoryScores: ReportCategoryScoreInput[]): string[] {
   return [...categoryScores]
     .filter((cs) => cs.maxScore > 0)
-    .sort((a, b) => b.score / b.maxScore - a.score / a.maxScore)
+    .sort((a, b) => effectiveCategoryValues(b).score / b.maxScore - effectiveCategoryValues(a).score / a.maxScore)
     .slice(0, BUSINESS_RISK_DRIVERS_LIMIT)
-    .map((cs) => `${CATEGORY_LABELS[cs.category]} is a relative strength to build on: ${cs.rationale}`);
+    .map((cs) => {
+      const rationale = cs.overrideRationale ?? cs.rationale;
+      return `${CATEGORY_LABELS[cs.category]} is a relative strength to build on: ${rationale}`;
+    });
 }
 
 function buildFallbackRoadmapNarrative(roadmapLength: number): string {
@@ -310,19 +371,37 @@ export function buildReportData(input: ReportInput): ReportData {
     ? "Scored across all 10 WII categories, including WordPress maintainability."
     : "WordPress maintainability was not applicable for this site; its points were redistributed across the other 9 categories.";
 
-  const categoryBreakdown = [...input.categoryScores]
-    .sort((a, b) => b.score / b.maxScore - a.score / a.maxScore)
-    .map((cs) => ({
+  // Final (effective) overall figures, re-derived from the effective per-category scores — the
+  // same deterministic formula computeScanScore uses, just re-applied to stored scores. Identical
+  // to the automated input.overallScore/etc. until a reviewer overrides a category.
+  const final = computeScanScoreFromCategoryScores({
+    categoryScores: input.categoryScores.map((cs) => ({
       category: cs.category,
-      label: CATEGORY_LABELS[cs.category],
-      score: cs.score,
+      score: cs.overrideScore ?? cs.score,
       maxScore: cs.maxScore,
-      status: cs.status,
-    }));
+    })),
+    evidence: input.evidenceItems.map((e) => ({ category: e.category, severity: e.severity })),
+  });
+
+  const categoryBreakdown = [...input.categoryScores]
+    .sort((a, b) => effectiveCategoryValues(b).score / b.maxScore - effectiveCategoryValues(a).score / a.maxScore)
+    .map((cs) => {
+      const { score, status } = effectiveCategoryValues(cs);
+      return {
+        category: cs.category,
+        label: CATEGORY_LABELS[cs.category],
+        score,
+        maxScore: cs.maxScore,
+        status,
+        automatedScore: cs.score,
+        automatedStatus: cs.status,
+        isOverridden: isCategoryOverridden(cs),
+      };
+    });
 
   const categoryDeepDives = input.categoryScores
     .filter((cs) => !DEDICATED_SECTION_CATEGORIES.includes(cs.category))
-    .sort((a, b) => b.score / b.maxScore - a.score / a.maxScore)
+    .sort((a, b) => effectiveCategoryValues(b).score / b.maxScore - effectiveCategoryValues(a).score / a.maxScore)
     .map((cs) => buildCategorySummary(cs, evidenceById, narrativeSummaries));
 
   const aiCategoryScore = input.categoryScores.find((cs) => cs.category === "ai_discoverability");
@@ -338,6 +417,13 @@ export function buildReportData(input: ReportInput): ReportData {
         rationale: "No AI discoverability evidence was collected for this scan.",
         confidence: 0,
         evidence: [],
+        automatedScore: 0,
+        automatedStatus: "critical",
+        automatedRationale: "No AI discoverability evidence was collected for this scan.",
+        isOverridden: false,
+        overrideNote: null,
+        overriddenBy: null,
+        overriddenAt: null,
         strategistPerspective: null,
       };
 
@@ -390,6 +476,7 @@ export function buildReportData(input: ReportInput): ReportData {
     }));
 
   return {
+    reviewStatus: input.reviewStatus,
     cover: {
       rootUrl: input.scan.rootUrl,
       clientName: input.scan.clientName,
@@ -397,22 +484,32 @@ export function buildReportData(input: ReportInput): ReportData {
       generatedAt: input.scan.generatedAt.toISOString(),
       pagesCrawled: input.scan.pagesCrawled,
       pagesRequested: input.scan.pagesRequested,
-      overallScore: input.overallScore,
-      grade: input.grade,
+      overallScore: final.overallScore,
+      grade: final.grade,
+      automatedOverallScore: input.overallScore,
+      automatedGrade: input.grade,
     },
-    executiveSummary: input.narrative?.executiveSummary ?? buildExecutiveSummary(input),
+    executiveSummary: input.narrative?.executiveSummary ?? buildExecutiveSummary(input, final),
     topRisks,
     topOpportunities,
     executiveScorecard: {
-      overallScore: input.overallScore,
-      grade: input.grade,
-      businessRisk: input.businessRisk,
+      overallScore: final.overallScore,
+      grade: final.grade,
+      automatedOverallScore: input.overallScore,
+      automatedGrade: input.grade,
+      businessRisk: final.businessRisk,
       businessRiskDrivers: buildBusinessRiskDrivers(input.evidenceItems),
-      aiReadiness: input.aiReadiness,
-      priority: input.priority,
+      aiReadiness: final.aiReadiness,
+      priority: final.priority,
       methodologyNote,
     },
-    overallIndex: { overallScore: input.overallScore, grade: input.grade, categoryBreakdown },
+    overallIndex: {
+      overallScore: final.overallScore,
+      grade: final.grade,
+      automatedOverallScore: input.overallScore,
+      automatedGrade: input.grade,
+      categoryBreakdown,
+    },
     keyFindings,
     categoryDeepDives,
     aiDiscoverabilityAssessment,

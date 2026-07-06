@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { CategoryStatus, Severity } from "@/generated/prisma/enums";
+import type { CategoryStatus, ReportStatus, Severity } from "@/generated/prisma/enums";
 
 export function RunStatusBadge({ status }: { status: string }) {
   const variant =
@@ -78,6 +78,28 @@ export function SeverityBadge({ severity, className }: { severity: Severity; cla
   return (
     <Badge variant={SEVERITY_VARIANT[severity]} className={cn("capitalize", className)}>
       {severity}
+    </Badge>
+  );
+}
+
+const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
+  draft: "Draft",
+  needs_review: "Needs Review",
+  approved: "Approved",
+  exported: "Exported",
+};
+
+const REPORT_STATUS_VARIANT: Record<ReportStatus, "secondary" | "warning" | "success"> = {
+  draft: "secondary",
+  needs_review: "warning",
+  approved: "success",
+  exported: "success",
+};
+
+export function ReportStatusBadge({ status, className }: { status: ReportStatus; className?: string }) {
+  return (
+    <Badge variant={REPORT_STATUS_VARIANT[status]} className={className}>
+      {REPORT_STATUS_LABEL[status]}
     </Badge>
   );
 }
